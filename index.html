@@ -1,0 +1,2832 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETS EL Arafat — Réservation en ligne</title>
+  <meta name="description" content="Boutique ETS EL Arafat — Réservez en ligne vos articles d'électronique, électroménager, informatique, téléphones, mode et maison. Garantie, stock et prix promo.">
+  <!-- jsPDF pour générer le reçu PDF côté client -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- qrcode.js pour générer un QR code dans le reçu PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* ===========================================================
+       ETS EL ARAFAT — Feuille de style
+       Palette : vert émeraude + or, fond crème, typographie serif pour les titres
+       =========================================================== */
+    :root {
+      --green-900: #0b3d2e;
+      --green-700: #11714a;
+      --green-500: #1aa05a;
+      --gold:      #d4a017;
+      --gold-soft: #f3d27a;
+      --cream:     #fbf7ef;
+      --paper:     #ffffff;
+      --ink:       #1c2620;
+      --ink-soft:  #51635a;
+      --line:      #e3dccd;
+      --danger:    #c0392b;
+      --shadow-sm: 0 1px 2px rgba(11, 61, 46, .06);
+      --shadow-md: 0 6px 18px rgba(11, 61, 46, .10);
+      --shadow-lg: 0 18px 48px rgba(11, 61, 46, .18);
+      --radius:    14px;
+      --radius-sm: 10px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', Tahoma, system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--cream);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .serif {
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      letter-spacing: -0.01em;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ---------------- HEADER ---------------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 61, 46, .96);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      border-bottom: 2px solid var(--gold);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      height: 64px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: #fff;
+    }
+    .brand-mark {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+      display: grid; place-items: center;
+      color: var(--green-900);
+      font-weight: 800;
+      font-family: 'Playfair Display', serif;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .brand small {
+      display: block;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--gold-soft);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
+    .search {
+      flex: 1;
+      max-width: 460px;
+      position: relative;
+    }
+    .search input {
+      width: 100%;
+      height: 38px;
+      border: 0;
+      border-radius: 50px;
+      padding: 0 16px 0 40px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: background .2s;
+    }
+    .search input::placeholder { color: rgba(255,255,255,.65); }
+    .search input:focus { background: rgba(255,255,255,.22); }
+    .search svg {
+      position: absolute;
+      left: 14px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px;
+      color: rgba(255,255,255,.7);
+    }
+    .cart-btn {
+      position: relative;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--gold);
+      color: var(--green-900);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 14px;
+      border: 0;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .cart-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .cart-count {
+      background: var(--green-900);
+      color: #fff;
+      font-size: 11px;
+      min-width: 20px; height: 20px;
+      border-radius: 20px;
+      display: inline-grid; place-items: center;
+      padding: 0 6px;
+    }
+
+    /* ---------------- HERO ---------------- */
+    .hero {
+      position: relative;
+      min-height: 380px;
+      display: grid;
+      align-items: flex-end;
+      overflow: hidden;
+      color: #fff;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('E1.jpeg');
+      background-size: cover;
+      background-position: center;
+      filter: brightness(.65) saturate(1.05);
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, rgba(11,61,46,.55) 0%, rgba(11,61,46,.85) 100%);
+    }
+    .hero-content {
+      position: relative;
+      padding: 40px 0 48px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1.1;
+      max-width: 720px;
+      text-shadow: 0 2px 18px rgba(0,0,0,.4);
+    }
+    .hero p {
+      max-width: 620px;
+      margin-top: 12px;
+      font-size: clamp(14px, 2.2vw, 17px);
+      color: rgba(255,255,255,.92);
+    }
+    .hero-cta {
+      margin-top: 22px;
+      display: inline-flex; gap: 12px; flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: 0;
+      transition: transform .15s, box-shadow .15s, background .2s;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--green-900);
+      box-shadow: 0 6px 20px rgba(212, 160, 23, .35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-ghost {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.4);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.22); }
+
+    /* ---------------- CATEGORY NAV ---------------- */
+    .catnav {
+      position: sticky;
+      top: 64px;
+      z-index: 40;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+    }
+    .catnav-inner {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 0;
+      scrollbar-width: none;
+    }
+    .catnav-inner::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+      border-radius: 50px;
+      background: var(--cream);
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .cat-pill:hover { color: var(--green-700); border-color: var(--green-500); }
+    .cat-pill.active {
+      background: var(--green-700);
+      color: #fff;
+      border-color: var(--green-700);
+    }
+
+    /* ---------------- SECTIONS ---------------- */
+    main { padding: 32px 0 64px; }
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--line);
+    }
+    .section-head h2 {
+      font-size: clamp(22px, 3.5vw, 30px);
+      color: var(--green-900);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-head h2::before {
+      content: '';
+      width: 6px; height: 28px;
+      background: var(--gold);
+      border-radius: 4px;
+    }
+    .section-head .count {
+      font-size: 13px;
+      color: var(--ink-soft);
+      background: var(--cream);
+      padding: 4px 10px;
+      border-radius: 50px;
+    }
+    .section { margin-bottom: 44px; scroll-margin-top: 130px; }
+
+    /* ---------------- PRODUCT GRID ---------------- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--green-500);
+    }
+    .card-media {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(135deg, #eef3ee, #f7f2e3);
+      overflow: hidden;
+    }
+    .card-media img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform .35s;
+    }
+    .card:hover .card-media img { transform: scale(1.05); }
+    .badge-promo {
+      position: absolute; top: 10px; left: 10px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 50px;
+      letter-spacing: .04em;
+    }
+    .badge-cat {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(11, 61, 46, .85);
+      color: var(--gold-soft);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .card-body {
+      padding: 14px 14px 16px;
+      display: flex; flex-direction: column;
+      flex: 1;
+    }
+    .card-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--ink);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .card-desc {
+      font-size: 12.5px;
+      color: var(--ink-soft);
+      margin-bottom: 10px;
+      flex: 1;
+    }
+    .card-meta {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 10px;
+    }
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 50px;
+      background: var(--cream);
+      color: var(--ink-soft);
+      border: 1px solid var(--line);
+    }
+    .meta-chip.warranty { color: var(--green-700); border-color: #c4e0d0; background: #ecf6ef; }
+    .meta-chip.stock { color: #8a5a00; border-color: #f0d68a; background: #fff7e0; }
+    .meta-chip.stock.low { color: var(--danger); border-color: #f5b5ad; background: #fdeceb; }
+    .meta-chip svg { width: 11px; height: 11px; }
+
+    .card-price {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-bottom: 12px;
+    }
+    .price-promo {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--green-900);
+      font-family: 'Playfair Display', serif;
+    }
+    .price-old {
+      font-size: 13px;
+      color: var(--ink-soft);
+      text-decoration: line-through;
+    }
+    .price-currency { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+    .btn-reserve {
+      width: 100%;
+      background: var(--green-700);
+      color: #fff;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background .2s, transform .15s;
+    }
+    .btn-reserve:hover { background: var(--green-900); transform: translateY(-1px); }
+    .btn-reserve:disabled {
+      background: #b9c4be;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .card-actions .btn-reserve { flex: 1; }
+    .btn-addcart {
+      flex: 0 0 auto;
+      background: var(--cream);
+      color: var(--green-700);
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .btn-addcart:hover:not(:disabled) {
+      background: var(--green-700);
+      color: #fff;
+      border-color: var(--green-700);
+    }
+    .btn-addcart:disabled {
+      background: #ece8db;
+      color: #b9c4be;
+      cursor: not-allowed;
+    }
+
+    /* ---------------- MODAL RESERVATION ---------------- */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(11, 26, 20, .55);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--paper);
+      border-radius: 18px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-head {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--green-900);
+      color: #fff;
+      border-radius: 18px 18px 0 0;
+    }
+    .modal-head h3 {
+      font-size: 18px;
+      color: #fff;
+    }
+    .modal-head h3 small {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: var(--gold-soft);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .modal-close {
+      background: rgba(255,255,255,.15);
+      border: 0;
+      color: #fff;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: grid; place-items: center;
+      transition: background .15s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.3); }
+
+    .modal-body { padding: 22px 24px; }
+    .product-preview {
+      display: flex; gap: 12px;
+      padding: 12px;
+      background: var(--cream);
+      border-radius: var(--radius-sm);
+      margin-bottom: 18px;
+      align-items: center;
+    }
+    .product-preview img {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #fff;
+    }
+    .product-preview h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .product-preview .pp-price {
+      font-size: 13px;
+      color: var(--green-700);
+      font-weight: 700;
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-row label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .form-row input,
+    .form-row textarea,
+    .form-row select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-row input:focus,
+    .form-row textarea:focus,
+    .form-row select:focus {
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(26, 160, 90, .15);
+    }
+    .form-row textarea { resize: vertical; min-height: 70px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .qty-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .qty-btn {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: all .15s;
+    }
+    .qty-btn:hover { background: var(--cream); border-color: var(--green-500); }
+    .qty-val {
+      min-width: 40px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .total-line {
+      display: flex; justify-content: space-between;
+      padding: 12px 0;
+      border-top: 1px dashed var(--line);
+      margin-top: 6px;
+      font-size: 14px;
+    }
+    .total-line strong {
+      color: var(--green-900);
+      font-size: 18px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .modal-foot {
+      padding: 16px 24px 22px;
+      display: flex; gap: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .modal-foot .btn { flex: 1; justify-content: center; }
+    .btn-secondary {
+      background: var(--cream);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .btn-secondary:hover { background: #efe9d8; }
+
+    /* ---------------- CART DRAWER ---------------- */
+    .drawer-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(11, 26, 20, .5);
+      display: none;
+      z-index: 95;
+    }
+    .drawer-backdrop.open { display: block; animation: fadeIn .2s; }
+    .drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 100%; max-width: 420px;
+      height: 100%;
+      background: var(--paper);
+      z-index: 96;
+      transform: translateX(100%);
+      transition: transform .3s ease;
+      display: flex; flex-direction: column;
+      box-shadow: -10px 0 40px rgba(0,0,0,.18);
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head {
+      padding: 18px 22px;
+      background: var(--green-900);
+      color: #fff;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .drawer-head h3 { color: #fff; font-size: 18px; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
+    .cart-item {
+      display: flex; gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .cart-item img {
+      width: 56px; height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--cream);
+    }
+    .cart-item-info { flex: 1; }
+    .cart-item-info h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .cart-item-info .ci-meta {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-top: 2px;
+    }
+    .cart-item-info .ci-price {
+      font-size: 13px;
+      color: var(--green-700);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .cart-item-remove {
+      background: none; border: 0;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 18px;
+      align-self: flex-start;
+    }
+    .cart-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--ink-soft);
+    }
+    .cart-empty svg { width: 48px; height: 48px; opacity: .35; margin: 0 auto 12px; }
+    .drawer-foot {
+      padding: 18px 22px;
+      border-top: 1px solid var(--line);
+      background: var(--cream);
+    }
+    .drawer-total {
+      display: flex; justify-content: space-between;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    .drawer-total strong {
+      color: var(--green-900);
+      font-size: 20px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    /* ---------------- FOOTER ---------------- */
+    footer {
+      background: var(--green-900);
+      color: #fff;
+      padding: 40px 0 24px;
+      margin-top: 40px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 28px;
+    }
+    .footer-grid h4 {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold-soft);
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    .footer-grid p, .footer-grid li {
+      font-size: 13.5px;
+      color: rgba(255,255,255,.8);
+      margin-bottom: 6px;
+      list-style: none;
+    }
+    .footer-grid a:hover { color: var(--gold-soft); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,.12);
+      padding-top: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,.6);
+    }
+
+    /* ---------------- TOAST ---------------- */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--green-900);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 50px;
+      box-shadow: var(--shadow-lg);
+      z-index: 200;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      transition: transform .35s cubic-bezier(.4,1.6,.5,1);
+      max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast svg { color: var(--gold-soft); width: 18px; height: 18px; }
+
+    /* ---------------- RECEIPT PREVIEW ---------------- */
+    .receipt-preview-backdrop {
+      align-items: stretch;
+      padding: 0;
+      z-index: 110;
+    }
+    .receipt-preview-wrap {
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+      background: #2c3e34;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp .25s ease;
+    }
+    .receipt-preview-toolbar {
+      flex: 0 0 auto;
+      background: #0b3d2e;
+      color: #fff;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 2px solid var(--gold);
+      flex-wrap: wrap;
+    }
+    .receipt-preview-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .receipt-preview-title svg { color: var(--gold-soft); }
+    .receipt-preview-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .rp-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gold);
+      color: var(--green-900);
+      border: 0;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, background .2s, box-shadow .15s;
+      font-family: 'Inter', sans-serif;
+    }
+    .rp-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    .rp-btn-download { background: var(--gold); }
+    .rp-btn-download:hover { background: #e0ad1f; }
+    .rp-btn-print { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .rp-btn-print:hover { background: rgba(255,255,255,.22); }
+    .rp-btn-close {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      width: 34px; height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 22px;
+      justify-content: center;
+    }
+    .rp-btn-close:hover { background: var(--danger); }
+
+    .receipt-preview-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      background:
+        linear-gradient(45deg, #243729 25%, transparent 25%),
+        linear-gradient(-45deg, #243729 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #243729 75%),
+        linear-gradient(-45deg, transparent 75%, #243729 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: #1f2e24;
+    }
+    .receipt-preview-content {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* ---- Aspect papier A4 ---- */
+    .receipt {
+      background: #fff;
+      color: var(--ink);
+      width: 100%;
+      max-width: 800px;
+      min-height: 1130px; /* ratio A4 approximatif */
+      margin: 0 auto;
+      position: relative;
+      box-shadow: 0 8px 40px rgba(0,0,0,.4);
+      padding-bottom: 100px; /* laisse la place au footer absolu */
+      font-family: 'Helvetica', Arial, sans-serif;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .receipt-header {
+      background: var(--green-900);
+      color: #fff;
+      padding: 30px 36px 22px;
+      position: relative;
+    }
+    .receipt-header::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 6px;
+      background: var(--gold);
+    }
+    .receipt-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .receipt-brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .receipt-logo {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: var(--green-900);
+      display: grid;
+      place-items: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 800;
+      font-size: 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .receipt-brand-text h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 2px;
+      letter-spacing: -0.01em;
+    }
+    .receipt-brand-text small {
+      display: block;
+      color: var(--gold-soft);
+      font-size: 11px;
+      letter-spacing: .04em;
+      margin-bottom: 4px;
+    }
+    .receipt-brand-text .addr {
+      color: rgba(255,255,255,.75);
+      font-size: 11px;
+    }
+    .receipt-meta {
+      text-align: right;
+      color: #fff;
+    }
+    .receipt-meta h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .receipt-meta small {
+      display: block;
+      color: var(--gold-soft);
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .receipt-meta .receipt-num {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: #fff;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .receipt-section-title {
+      color: var(--green-900);
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 14px;
+      margin: 22px 36px 8px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid var(--gold);
+      display: inline-block;
+    }
+    .receipt-client {
+      padding: 0 36px;
+    }
+    .receipt-client-row {
+      font-size: 12.5px;
+      margin-bottom: 5px;
+      color: var(--ink);
+      display: flex;
+      gap: 10px;
+    }
+    .receipt-client-row .lbl {
+      color: var(--ink-soft);
+      min-width: 130px;
+      font-weight: 600;
+    }
+    .receipt-client-row .val {
+      font-weight: 700;
+      color: var(--ink);
+      flex: 1;
+    }
+
+    .receipt-table {
+      width: calc(100% - 72px);
+      margin: 8px 36px 0;
+      border-collapse: collapse;
+    }
+    .receipt-table thead th {
+      background: var(--green-900);
+      color: #fff;
+      padding: 8px 10px;
+      font-size: 11px;
+      text-align: left;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .receipt-table thead th.num { text-align: right; }
+    .receipt-table tbody td {
+      padding: 8px 10px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    .receipt-table tbody tr:nth-child(odd) td { background: var(--cream); }
+    .receipt-table .name-cell { font-weight: 600; color: var(--ink); }
+    .receipt-table .name-cell small {
+      display: block;
+      color: var(--ink-soft);
+      font-weight: 400;
+      font-size: 10.5px;
+      margin-top: 2px;
+    }
+    .receipt-table td.num { text-align: right; }
+
+    .receipt-totals {
+      padding: 12px 36px 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+    .receipt-totals-info {
+      font-size: 11.5px;
+      color: var(--ink-soft);
+      line-height: 1.7;
+    }
+    .receipt-totals-info strong { color: var(--ink); }
+    .receipt-total-amount {
+      background: var(--green-900);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      text-align: right;
+    }
+    .receipt-total-amount small {
+      display: block;
+      color: var(--gold-soft);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .receipt-total-amount strong {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .receipt-status {
+      margin: 14px 36px;
+      background: var(--cream);
+      border: 1px solid var(--green-500);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .receipt-status .check {
+      width: 28px; height: 28px;
+      background: var(--green-700);
+      color: #fff;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .receipt-status .check svg { width: 16px; height: 16px; }
+    .receipt-status strong {
+      color: var(--green-700);
+      font-size: 13px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .receipt-status small {
+      color: var(--ink-soft);
+      font-size: 11px;
+    }
+
+    .receipt-code-wrap {
+      margin: 16px 36px;
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+    .receipt-code-box {
+      flex: 1;
+      background: var(--green-900);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .receipt-code-box .lbl {
+      color: var(--gold-soft);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .receipt-code-box .code {
+      font-family: 'Courier New', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .receipt-code-box .ref {
+      color: var(--gold-soft);
+      font-size: 10px;
+    }
+    .receipt-code-box .ref + .ref { margin-top: 2px; }
+    .receipt-qr {
+      width: 88px; height: 88px;
+      background: #fff;
+      padding: 6px;
+      border-radius: 8px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+    .receipt-qr img {
+      width: 100%; height: 100%;
+      display: block;
+    }
+    .receipt-qr-placeholder {
+      width: 100%; height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--green-900);
+      font-weight: 700;
+      font-size: 11px;
+      text-align: center;
+      background: var(--cream);
+    }
+
+    .receipt-footer {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: var(--green-900);
+      color: #fff;
+      padding: 16px 36px;
+    }
+    .receipt-footer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--gold);
+    }
+    .receipt-footer h4 {
+      color: var(--gold-soft);
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      margin-bottom: 6px;
+      letter-spacing: .04em;
+    }
+    .receipt-footer-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: rgba(255,255,255,.85);
+    }
+    .receipt-footer-row > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* ---- Responsive : aperçu du reçu ---- */
+    @media (max-width: 640px) {
+      .receipt-preview-toolbar {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .receipt-preview-title { font-size: 14px; gap: 6px; }
+      .receipt-preview-title svg { width: 16px; height: 16px; }
+      .rp-btn { padding: 7px 10px; font-size: 11.5px; }
+      .rp-btn-close { width: 30px; height: 30px; font-size: 18px; }
+      .rp-btn-download span, .rp-btn-print span { display: none; }
+      .receipt-preview-scroll { padding: 10px; }
+
+      .receipt {
+        min-height: auto;
+        padding-bottom: 130px;
+        font-size: 12px;
+      }
+      .receipt-header { padding: 20px 18px 16px; }
+      .receipt-header-row { flex-direction: column; gap: 14px; }
+      .receipt-meta { text-align: left; }
+      .receipt-brand-text h1 { font-size: 19px; }
+      .receipt-logo { width: 44px; height: 44px; font-size: 18px; }
+
+      .receipt-section-title { margin: 16px 18px 6px; font-size: 12.5px; }
+      .receipt-client { padding: 0 18px; }
+      .receipt-client-row { font-size: 11.5px; gap: 6px; }
+      .receipt-client-row .lbl { min-width: 95px; font-size: 11px; }
+
+      .receipt-table {
+        width: calc(100% - 36px);
+        margin: 6px 18px 0;
+      }
+      .receipt-table thead th { padding: 6px 6px; font-size: 9.5px; }
+      .receipt-table tbody td { padding: 6px; font-size: 10.5px; }
+      .receipt-table .name-cell small { font-size: 9.5px; }
+
+      .receipt-totals { padding: 8px 18px; flex-direction: column; align-items: stretch; gap: 8px; }
+      .receipt-totals-info { font-size: 10.5px; }
+      .receipt-total-amount { text-align: left; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+      .receipt-total-amount small { margin-bottom: 0; }
+      .receipt-total-amount strong { font-size: 16px; }
+
+      .receipt-status { margin: 10px 18px; padding: 8px 10px; }
+      .receipt-status .check { width: 24px; height: 24px; }
+      .receipt-status strong { font-size: 11.5px; }
+      .receipt-status small { font-size: 10px; }
+
+      .receipt-code-wrap {
+        margin: 12px 18px;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .receipt-code-box .code { font-size: 22px; letter-spacing: 3px; }
+      .receipt-qr { width: 100%; height: 120px; }
+
+      .receipt-footer { padding: 12px 18px; }
+      .receipt-footer h4 { font-size: 11.5px; }
+      .receipt-footer-row { font-size: 10px; gap: 14px; }
+    }
+
+    @media (min-width: 641px) and (max-width: 960px) {
+      .receipt-preview-content { max-width: 700px; }
+    }
+
+    /* ---------------- RESPONSIVE (mobile-first, multi-breakpoints) ---------------- */
+
+    /* ---- Grands mobiles / petits tactiles (≤ 640px) ---- */
+    @media (max-width: 640px) {
+      .container { padding: 0 14px; }
+
+      /* Topbar : on cache la recherche et le libellé, on garde logo + panier */
+      .topbar-inner { gap: 10px; height: 56px; }
+      .brand { font-size: 16px; gap: 8px; }
+      .brand-mark { width: 32px; height: 32px; font-size: 13px; }
+      .brand small { display: none; }
+      .search { display: none; }
+      .cart-btn {
+        padding: 7px 12px;
+        font-size: 13px;
+      }
+      .cart-btn svg { width: 14px; height: 14px; }
+
+      /* Catnav sticky sous la topbar (56px) */
+      .catnav { top: 56px; }
+      .catnav-inner { padding: 10px 0; gap: 6px; }
+      .cat-pill { padding: 6px 12px; font-size: 12px; }
+
+      /* Hero plus compact */
+      .hero { min-height: 280px; }
+      .hero-content { padding: 28px 0 32px; }
+      .hero h1 { font-size: 24px; }
+      .hero p { font-size: 14px; }
+      .hero-cta { gap: 8px; }
+      .btn { padding: 10px 18px; font-size: 13px; }
+
+      /* Catalogue */
+      main { padding: 22px 0 48px; }
+      .section { margin-bottom: 32px; scroll-margin-top: 110px; }
+      .section-head { margin-bottom: 14px; padding-bottom: 8px; }
+      .section-head h2 { font-size: 19px; }
+      .section-head h2::before { height: 22px; }
+      .section-head .count { font-size: 11px; padding: 3px 8px; }
+
+      /* Grille produits : 1 colonne par défaut, 2 colonnes si large ≥ 380px */
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      @media (min-width: 380px) {
+        .grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      .card-media { aspect-ratio: 1 / 1; }
+      .card-body { padding: 12px; }
+      .card-title { font-size: 13.5px; }
+      .card-desc { font-size: 12px; -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+      .meta-chip { font-size: 10.5px; padding: 2px 7px; }
+      .price-promo { font-size: 17px; }
+      .price-old { font-size: 11.5px; }
+      .btn-reserve, .btn-addcart { padding: 9px 10px; font-size: 12px; }
+      .card-actions { gap: 6px; }
+
+      /* Modale : plein écran sur mobile */
+      .modal-backdrop { padding: 0; align-items: stretch; }
+      .modal {
+        max-width: 100%;
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        animation: slideUpMobile .25s ease;
+      }
+      @keyframes slideUpMobile { from { transform: translateY(100%); opacity: 1; } to { transform: translateY(0); opacity: 1; } }
+      .modal-head { padding: 16px 18px; border-radius: 0; }
+      .modal-head h3 { font-size: 16px; }
+      .modal-body { padding: 18px; }
+      .form-grid { grid-template-columns: 1fr; gap: 10px; }
+      .form-row input, .form-row textarea, .form-row select { font-size: 16px; /* éviter zoom iOS */ }
+      .product-preview img { width: 56px; height: 56px; }
+      .modal-foot { padding: 14px 18px 18px; flex-direction: column-reverse; gap: 8px; }
+      .modal-foot .btn { width: 100%; }
+      .modal-foot p { flex-basis: auto !important; margin-top: 0 !important; }
+
+      /* Drawer panier : plein écran sur mobile */
+      .drawer {
+        max-width: 100%;
+        box-shadow: none;
+      }
+      .drawer-head { padding: 14px 16px; }
+      .drawer-head h3 { font-size: 16px; }
+      .drawer-body { padding: 14px 16px; }
+      .drawer-foot { padding: 14px 16px 18px; }
+      .drawer-client-form input { font-size: 16px; /* éviter zoom iOS */ }
+      .drawer-client-form .form-row { margin-bottom: 6px !important; }
+      .drawer-client-form h4 { font-size: 13px !important; margin-bottom: 6px !important; }
+
+      /* Toast : prend toute la largeur avec petite marge */
+      .toast {
+        left: 12px; right: 12px;
+        bottom: 16px;
+        transform: translateY(120%) translateX(0);
+        max-width: none;
+        font-size: 13px;
+        padding: 12px 16px;
+        text-align: center;
+      }
+      .toast.show { transform: translateY(0) translateX(0); }
+
+      /* Footer */
+      .footer-grid { grid-template-columns: 1fr; gap: 18px; }
+      .footer-grid h4 { font-size: 15px; }
+      footer { padding: 32px 0 20px; }
+      .footer-bottom { font-size: 11px; padding: 12px 0 0; }
+    }
+
+    /* ---- Tablettes (641px – 960px) ---- */
+    @media (min-width: 641px) and (max-width: 960px) {
+      .topbar-inner { gap: 14px; }
+      .search { max-width: 280px; }
+      .hero { min-height: 320px; }
+      .hero h1 { font-size: 34px; }
+      .grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .modal { max-width: 460px; }
+      .drawer { max-width: 380px; }
+    }
+
+    /* ---- Très grands écrans (>1240px) : 5 colonnes ---- */
+    @media (min-width: 1241px) {
+      .grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    }
+
+    /* ---- Très petits téléphones (≤ 360px) ---- */
+    @media (max-width: 360px) {
+      .container { padding: 0 10px; }
+      .brand { font-size: 14px; }
+      .brand-mark { width: 28px; height: 28px; font-size: 11px; }
+      .cart-btn { padding: 6px 10px; font-size: 12px; }
+      .hero h1 { font-size: 21px; }
+      .hero p { font-size: 13px; }
+      .btn { padding: 9px 14px; font-size: 12px; }
+      .section-head h2 { font-size: 17px; }
+      .price-promo { font-size: 15px; }
+      .price-old { font-size: 10.5px; }
+    }
+
+    /* ---- Mode paysage sur mobile (hauteur ≤ 480px) ---- */
+    @media (max-height: 480px) and (orientation: landscape) {
+      .hero { min-height: 240px; }
+      .hero-content { padding: 18px 0 22px; }
+      .hero h1 { font-size: 22px; }
+      .hero p { font-size: 13px; margin-top: 6px; }
+      .hero-cta { margin-top: 14px; }
+      .modal { max-height: 100vh; }
+      .modal-body { padding: 14px 18px; max-height: calc(100vh - 110px); overflow-y: auto; }
+    }
+
+    /* ---- Préférence : réduire les animations (accessibilité) ---- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* Print friendly */
+    @media print {
+      .topbar, .catnav, .hero-cta, .btn-reserve, .btn-addcart, .cart-btn, footer, .drawer, .drawer-backdrop, .modal-backdrop, .toast { display: none !important; }
+      .card-actions { display: none !important; }
+      body { background: #fff !important; }
+      .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============= HEADER ============= -->
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="#top" class="brand">
+        <span class="brand-mark">EA</span>
+        <span>
+          ETS EL Arafat
+          <small>Boutique & Réservations</small>
+        </span>
+      </a>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="searchInput" placeholder="Rechercher un article…" aria-label="Rechercher">
+      </div>
+      <button class="cart-btn" id="openCart" aria-label="Voir le panier de réservation">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+        Panier
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============= HERO ============= -->
+  <section class="hero" id="top">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <h1>ETS EL Arafat — Votre boutique de confiance</h1>
+      <p>Électronique, électroménager, informatique, téléphones, mode et articles pour la maison. Réservez en ligne vos articles en promotion, retirés en boutique avec garantie.</p>
+      <div class="hero-cta">
+        <a href="#categorie-electronique" class="btn btn-primary">
+          Voir le catalogue
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#contact" class="btn btn-ghost">Nous contacter</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= CATEGORY NAV ============= -->
+  <nav class="catnav">
+    <div class="container catnav-inner" id="catNav">
+      <button class="cat-pill active" data-target="all">Tous les articles</button>
+      <button class="cat-pill" data-target="categorie-electronique">Électronique</button>
+      <button class="cat-pill" data-target="categorie-electromenager">Électroménager</button>
+      <button class="cat-pill" data-target="categorie-informatique">Informatique</button>
+      <button class="cat-pill" data-target="categorie-telephones">Téléphones & Tablettes</button>
+      <button class="cat-pill" data-target="categorie-mode">Mode & Accessoires</button>
+      <button class="cat-pill" data-target="categorie-maison">Maison & Bureau</button>
+    </div>
+  </nav>
+
+  <!-- ============= MAIN CATALOG ============= -->
+  <main>
+    <div class="container" id="catalog">
+      <!-- Les sections produits sont injectées par JS -->
+    </div>
+  </main>
+
+  <!-- ============= FOOTER ============= -->
+  <footer id="contact">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h4>ETS EL Arafat</h4>
+          <p>Votre boutique généraliste au service des particuliers et professionnels. Articles neufs avec garantie, prix promotionnels toute l'année, réservation en ligne facile.</p>
+        </div>
+        <div>
+          <h4>Nous contacter</h4>
+          <ul>
+            <li>Marché central — Boutique n°24</li>
+            <li>WhatsApp réservations : <a href="https://wa.me/22892871605" target="_blank" rel="noopener" style="color:var(--gold-soft);text-decoration:underline;">+228 92 87 16 05</a></li>
+            <li>WhatsApp finalisation : <a href="https://wa.me/22893387595" target="_blank" rel="noopener" style="color:var(--gold-soft);text-decoration:underline;">+228 93 38 75 95</a></li>
+            <li>Email : contact@etselarafat.com</li>
+            <li>Lun–Sam : 8h00 – 19h00</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Informations</h4>
+          <ul>
+            <li>Articles garantis 6 à 36 mois</li>
+            <li>Réservation gratuite, sans engagement</li>
+            <li>Retrait en boutique sous 48h</li>
+            <li>Paiement sur place</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        © <span id="year"></span> ETS EL Arafat — Tous droits réservés. Plateforme de réservation en ligne.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============= MODAL RESERVATION ============= -->
+  <div class="modal-backdrop" id="reserveModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle">
+          Réserver cet article
+          <small>Retrait en boutique sous 48h</small>
+        </h3>
+        <button class="modal-close" id="closeModal" aria-label="Fermer">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="product-preview" id="ppPreview">
+          <img id="ppImg" src="" alt="">
+          <div>
+            <h4 id="ppName"></h4>
+            <div class="pp-price" id="ppPrice"></div>
+            <div class="pp-meta" id="ppMeta" style="font-size:12px;color:var(--ink-soft);margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <form id="reserveForm">
+          <div class="form-grid">
+            <div class="form-row">
+              <label for="rName">Nom complet *</label>
+              <input type="text" id="rName" required placeholder="Ex : Adamou Said">
+            </div>
+            <div class="form-row">
+              <label for="rPhone">Téléphone *</label>
+              <input type="tel" id="rPhone" required placeholder="+235 ...">
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="rEmail">Email (optionnel)</label>
+            <input type="email" id="rEmail" placeholder="vous@email.com">
+          </div>
+
+          <div class="form-row">
+            <label>Quantité</label>
+            <div class="qty-row">
+              <button type="button" class="qty-btn" id="qtyMinus">&minus;</button>
+              <span class="qty-val" id="qtyVal">1</span>
+              <button type="button" class="qty-btn" id="qtyPlus">+</button>
+              <span style="font-size:12px;color:var(--ink-soft);margin-left:8px;" id="qtyStock"></span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="rDate">Date de retrait souhaitée *</label>
+            <input type="date" id="rDate" required>
+          </div>
+
+          <div class="form-row">
+            <label for="rNote">Notes (optionnel)</label>
+            <textarea id="rNote" placeholder="Couleur, taille, informations complémentaires…"></textarea>
+          </div>
+
+          <div class="total-line">
+            <span>Total de la réservation</span>
+            <strong id="totalPrice">0 FCFA</strong>
+          </div>
+        </form>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" id="cancelReserve">Annuler</button>
+        <button class="btn btn-primary" id="confirmReserve" style="background:#25D366;color:#fff;box-shadow:0 6px 20px rgba(37,211,102,.35);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.519 5.26l-.999 3.648 3.969-1.607zm5.586-5.545c-.075-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+          Envoyer sur WhatsApp
+        </button>
+        <p style="text-align:center;font-size:11px;color:var(--ink-soft);margin-top:8px;flex-basis:100%;">
+          La réservation sera envoyée au<br>
+          <strong style="color:var(--green-700);">+228 92 87 16 05</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= CART DRAWER ============= -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="cartDrawer" aria-label="Panier de réservation">
+    <div class="drawer-head">
+      <h3>Mes réservations</h3>
+      <button class="modal-close" id="closeDrawer" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="drawer-body" id="cartBody"></div>
+    <div class="drawer-foot">
+      <div class="drawer-client-form" id="clientFormWrap" style="display:none;">
+        <h4 style="font-family:'Playfair Display',serif;color:var(--green-900);font-size:14px;margin-bottom:10px;">Vos coordonnées</h4>
+        <div class="form-row" style="margin-bottom:8px;">
+          <input type="text" id="cartName" placeholder="Nom complet *" style="font-size:13px;padding:8px 10px;">
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <input type="tel" id="cartPhone" placeholder="Téléphone *" style="font-size:13px;padding:8px 10px;">
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <input type="date" id="cartDate" style="font-size:13px;padding:8px 10px;">
+        </div>
+      </div>
+      <div class="drawer-total">
+        <span>Total estimé</span>
+        <strong id="cartTotal">0 FCFA</strong>
+      </div>
+      <button class="btn btn-primary" id="validateCart" style="width:100%;justify-content:center;background:#25D366;color:#fff;box-shadow:0 6px 20px rgba(37,211,102,.35);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.519 5.26l-.999 3.648 3.969-1.607zm5.586-5.545c-.075-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+        Finaliser sur WhatsApp
+      </button>
+      <p style="text-align:center;font-size:11px;color:var(--ink-soft);margin-top:10px;">
+        La commande finale sera envoyée au<br>
+        <strong style="color:var(--green-700);">+228 93 38 75 95</strong>
+      </p>
+    </div>
+  </aside>
+
+  <!-- ============= TOAST ============= -->
+  <div class="toast" id="toast">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- ============= RECEUPT PREVIEW MODAL ============= -->
+  <div class="modal-backdrop receipt-preview-backdrop" id="receiptPreviewModal" role="dialog" aria-modal="true" aria-labelledby="receiptPreviewTitle">
+    <div class="receipt-preview-wrap">
+      <div class="receipt-preview-toolbar">
+        <div class="receipt-preview-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          <span id="receiptPreviewTitle">Aperçu du reçu</span>
+        </div>
+        <div class="receipt-preview-actions">
+          <button class="rp-btn rp-btn-download" id="rpDownload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Télécharger PDF
+          </button>
+          <button class="rp-btn rp-btn-print" id="rpPrint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimer
+          </button>
+          <button class="rp-btn rp-btn-close" id="rpClose" aria-label="Fermer">&times;</button>
+        </div>
+      </div>
+      <div class="receipt-preview-scroll">
+        <div class="receipt-preview-content" id="receiptPreviewContent">
+          <!-- Le contenu du reçu est injecté par JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===========================================================
+   ETS EL ARAFAT — Données du catalogue
+   Chaque produit :
+   - id, name, cat (id catégorie), catLabel, desc
+   - warranty (mois), stock (unités), priceOld, pricePromo
+   - img (nom du fichier JPEG attendu dans /products/)
+   - icon (emoji utilisé pour le placeholder si image manquante)
+   =========================================================== */
+const CATEGORIES = [
+  { id: 'categorie-electronique',  label: 'Électronique',           icon: '📺' },
+  { id: 'categorie-electromenager',label: 'Électroménager',         icon: '🔌' },
+  { id: 'categorie-informatique',  label: 'Informatique',           icon: '💻' },
+  { id: 'categorie-telephones',    label: 'Téléphones & Tablettes', icon: '📱' },
+  { id: 'categorie-mode',          label: 'Mode & Accessoires',     icon: '👜' },
+  { id: 'categorie-maison',        label: 'Maison & Bureau',        icon: '🪑' },
+];
+
+const PRODUCTS = [
+  /* ---------- Électronique ---------- */
+  { id:'p1',  name:'TV LED Samsung 43" Full HD', cat:'categorie-electronique', catLabel:'Électronique',
+    desc:'Téléviseur 43 pouces, résolution Full HD, HDR, 2 ports HDMI, son Dolby.',
+    warranty:24, stock:8, priceOld:350000, pricePromo:299000,
+    img:'tv-samsung-43.jpeg', icon:'📺' },
+  { id:'p2',  name:'Chaîne Hi-Fi Sony BT-200', cat:'categorie-electronique', catLabel:'Électronique',
+    desc:'Chaîne hi-fi Bluetooth 80W, USB, radio FM, double haut-parleur.',
+    warranty:12, stock:3, priceOld:150000, pricePromo:119000,
+    img:'chaîne-hifi-sony.jpeg', icon:'🔊' },
+  { id:'p3',  name:'Projecteur Epson Home Cinema', cat:'categorie-electronique', catLabel:'Électronique',
+    desc:'Projecteur Full HD 3000 lumens, contraste 15000:1, HDMI + USB.',
+    warranty:12, stock:2, priceOld:220000, pricePromo:189000,
+    img:'projecteur-epson.jpeg', icon:'📽️' },
+
+  /* ---------- Électroménager ---------- */
+  { id:'p4',  name:'Réfrigérateur 350L No Frost', cat:'categorie-electromenager', catLabel:'Électroménager',
+    desc:'Réfrigérateur combiné 350L, froid ventilé, classe A+, inox.',
+    warranty:24, stock:5, priceOld:420000, pricePromo:379000,
+    img:'frigo-350l.jpeg', icon:'🧊' },
+  { id:'p5',  name:'Machine à laver 8kg automatique', cat:'categorie-electromenager', catLabel:'Électroménager',
+    desc:'Lave-linge 8kg, 1400 tours/min, 15 programmes, essorage variable.',
+    warranty:24, stock:4, priceOld:310000, pricePromo:269000,
+    img:'lave-linge-8kg.jpeg', icon:'🫧' },
+  { id:'p6',  name:'Micro-ondes 25L Digital', cat:'categorie-electromenager', catLabel:'Électroménager',
+    desc:'Four micro-ondes 25L, 900W, grille, 8 programmes automatiques.',
+    warranty:12, stock:12, priceOld:95000, pricePromo:75000,
+    img:'micro-ondes-25l.jpeg', icon:'🍽️' },
+  { id:'p7',  name:'Climatiseur 12000 BTU Split', cat:'categorie-electromenager', catLabel:'Électroménager',
+    desc:'Climatiseur split 12000 BTU, faible consommation, télécommande.',
+    warranty:24, stock:3, priceOld:280000, pricePromo:245000,
+    img:'clim-12000btu.jpeg', icon:'❄️' },
+
+  /* ---------- Informatique ---------- */
+  { id:'p8',  name:'Ordinateur portable HP 15', cat:'categorie-informatique', catLabel:'Informatique',
+    desc:'HP 15, Intel Core i5, 8Go RAM, SSD 512Go, écran 15.6" Full HD.',
+    warranty:12, stock:6, priceOld:450000, pricePromo:399000,
+    img:'hp-15-laptop.jpeg', icon:'💻' },
+  { id:'p9',  name:'Imprimante Canon PIXMA', cat:'categorie-informatique', catLabel:'Informatique',
+    desc:'Imprimante multifonction couleur, WiFi, scan et copie, recto-verso.',
+    warranty:12, stock:9, priceOld:85000, pricePromo:69000,
+    img:'imprimante-canon.jpeg', icon:'🖨️' },
+  { id:'p10', name:'Disque dur externe 1 To', cat:'categorie-informatique', catLabel:'Informatique',
+    desc:'Disque dur externe USB 3.0, 1 To, compact, compatible tous OS.',
+    warranty:36, stock:25, priceOld:45000, pricePromo:35000,
+    img:'disque-dur-1to.jpeg', icon:'💾' },
+
+  /* ---------- Téléphones & Tablettes ---------- */
+  { id:'p11', name:'Smartphone Samsung Galaxy A54', cat:'categorie-telephones', catLabel:'Téléphones & Tablettes',
+    desc:'Écran 6.4" Super AMOLED, 128 Go, 8 Go RAM, triple capteur 50 MP.',
+    warranty:12, stock:15, priceOld:220000, pricePromo:189000,
+    img:'samsung-a54.jpeg', icon:'📱' },
+  { id:'p12', name:'iPhone 13 128 Go', cat:'categorie-telephones', catLabel:'Téléphones & Tablettes',
+    desc:'Écran 6.1" OLED, puce A15 Bionic, double capteur 12 MP, 5G.',
+    warranty:12, stock:4, priceOld:650000, pricePromo:599000,
+    img:'iphone-13.jpeg', icon:'📱' },
+  { id:'p13', name:'Tablette Lenovo Tab M10', cat:'categorie-telephones', catLabel:'Téléphones & Tablettes',
+    desc:'Tablette 10.1" Full HD, 64 Go, 4 Go RAM, batterie 5000 mAh.',
+    warranty:12, stock:7, priceOld:180000, pricePromo:149000,
+    img:'lenovo-m10.jpeg', icon:'📲' },
+
+  /* ---------- Mode & Accessoires ---------- */
+  { id:'p14', name:'Montre Casio Sport', cat:'categorie-mode', catLabel:'Mode & Accessoires',
+    desc:'Montre digitale étanche, chronomètre, rétro-éclairage, bracelet résine.',
+    warranty:12, stock:20, priceOld:35000, pricePromo:25000,
+    img:'montre-casio.jpeg', icon:'⌚' },
+  { id:'p15', name:'Sac à main cuir véritable', cat:'categorie-mode', catLabel:'Mode & Accessoires',
+    desc:'Sac à main en cuir, doublure textile, fermeture éclair, bandoulière amovible.',
+    warranty:6, stock:10, priceOld:45000, pricePromo:32000,
+    img:'sac-cuir.jpeg', icon:'👜' },
+  { id:'p16', name:'Lunettes solaires Ray-Ban', cat:'categorie-mode', catLabel:'Mode & Accessoires',
+    desc:'Lunettes polarisées, protection UV400, monture en métal, étui inclus.',
+    warranty:6, stock:8, priceOld:60000, pricePromo:45000,
+    img:'lunettes-rayban.jpeg', icon:'🕶️' },
+
+  /* ---------- Maison & Bureau ---------- */
+  { id:'p17', name:'Bureau en bois massif', cat:'categorie-maison', catLabel:'Maison & Bureau',
+    desc:'Bureau 120×60 cm, tiroir de rangement, finition chêne, pieds en métal.',
+    warranty:12, stock:3, priceOld:120000, pricePromo:95000,
+    img:'bureau-bois.jpeg', icon:'🪑' },
+  { id:'p18', name:'Chaise de bureau ergonomique', cat:'categorie-maison', catLabel:'Maison & Bureau',
+    desc:'Chaise pivotante, dossier mesh, accoudoirs réglables, hauteur ajustable.',
+    warranty:12, stock:6, priceOld:75000, pricePromo:59000,
+    img:'chaise-bureau.jpeg', icon:'💺' },
+  { id:'p19', name:'Lampe LED de bureau', cat:'categorie-maison', catLabel:'Maison & Bureau',
+    desc:'Lampe LED USB, 3 modes d\'éclairage, intensité réglable, bras flexible.',
+    warranty:12, stock:18, priceOld:18000, pricePromo:12000,
+    img:'lampe-led.jpeg', icon:'💡' },
+];
+
+/* ===========================================================
+   Helpers
+   =========================================================== */
+const $ = (s, c=document) => c.querySelector(s);
+const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
+const fmt = n => n.toLocaleString('fr-FR') + ' FCFA';
+
+/* Placeholder SVG en data URI si l'image produit est absente */
+function placeholder(icon, label) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#eef3ee"/>
+        <stop offset="100%" stop-color="#f7f2e3"/>
+      </linearGradient>
+    </defs>
+    <rect width="400" height="300" fill="url(#g)"/>
+    <text x="200" y="150" font-size="80" text-anchor="middle" dominant-baseline="central">${icon}</text>
+    <text x="200" y="240" font-family="Inter, sans-serif" font-size="14" fill="#51635a" text-anchor="middle" font-weight="600">${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+/* ===========================================================
+   Rendu du catalogue
+   =========================================================== */
+function renderCatalog(filter='all', search='') {
+  const container = $('#catalog');
+  container.innerHTML = '';
+
+  let cats = CATEGORIES;
+  if (filter !== 'all') cats = CATEGORIES.filter(c => c.id === filter);
+
+  const term = search.trim().toLowerCase();
+  let totalShown = 0;
+
+  cats.forEach(cat => {
+    let items = PRODUCTS.filter(p => p.cat === cat.id);
+    if (term) {
+      items = items.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        p.desc.toLowerCase().includes(term) ||
+        p.catLabel.toLowerCase().includes(term)
+      );
+    }
+    if (!items.length) return;
+    totalShown += items.length;
+
+    const section = document.createElement('section');
+    section.className = 'section';
+    section.id = cat.id;
+    section.innerHTML = `
+      <div class="section-head">
+        <h2>${cat.icon}&nbsp;${cat.label}</h2>
+        <span class="count">${items.length} article${items.length>1?'s':''}</span>
+      </div>
+      <div class="grid">
+        ${items.map(p => cardHTML(p)).join('')}
+      </div>
+    `;
+    container.appendChild(section);
+  });
+
+  if (totalShown === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--ink-soft);">
+      <div style="font-size:48px;opacity:.4;margin-bottom:12px;">🔍</div>
+      <p>Aucun article ne correspond à votre recherche.</p>
+    </div>`;
+  }
+
+  // Attacher handlers boutons réserver (envoi direct WhatsApp au +228 92 87 16 05)
+  $$('.btn-reserve').forEach(btn => {
+    btn.addEventListener('click', () => openReserve(btn.dataset.id));
+  });
+
+  // Attacher handlers boutons ajouter au panier (finalisation groupée au +228 93 38 75 95)
+  $$('.btn-addcart').forEach(btn => {
+    btn.addEventListener('click', () => quickAddToCart(btn.dataset.id));
+  });
+
+  // Attacher onerror pour images manquantes
+  $$('img[data-fallback]').forEach(img => {
+    img.addEventListener('error', function() {
+      this.onerror = null;
+      this.src = placeholder(this.dataset.icon, this.dataset.fallback);
+    });
+  });
+}
+
+/* Ajout rapide au panier sans ouvrir la modale (qty = 1 par défaut) */
+function quickAddToCart(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  addToCart({
+    id: p.id,
+    name: p.name,
+    img: p.img,
+    icon: p.icon,
+    pricePromo: p.pricePromo,
+    warranty: p.warranty,
+    qty: 1,
+    client: {}
+  });
+  showToast(`"${p.name}" ajouté au panier.`, 2500);
+}
+
+function cardHTML(p) {
+  const discount = Math.round((1 - p.pricePromo / p.priceOld) * 100);
+  const stockClass = p.stock <= 3 ? 'low' : '';
+  const stockText = p.stock === 0 ? 'Rupture' : (p.stock <= 3 ? `Plus que ${p.stock} !` : `${p.stock} en stock`);
+  return `
+    <article class="card">
+      <div class="card-media">
+        <img src="products/${p.img}" alt="${p.name}"
+             data-fallback="${p.name}" data-icon="${p.icon}"
+             loading="lazy">
+        <span class="badge-promo">-${discount}%</span>
+        <span class="badge-cat">${p.catLabel}</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">${p.name}</h3>
+        <p class="card-desc">${p.desc}</p>
+        <div class="card-meta">
+          <span class="meta-chip warranty" title="Garantie">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg>
+            Garantie ${p.warranty} mois
+          </span>
+          <span class="meta-chip stock ${stockClass}" title="Stock disponible">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8 8-4-4-5 5"/><path d="M14 7h6v6"/></svg>
+            ${stockText}
+          </span>
+        </div>
+        <div class="card-price">
+          <span class="price-promo">${fmt(p.pricePromo)}</span>
+          <span class="price-old">${fmt(p.priceOld)}</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-reserve" data-id="${p.id}" ${p.stock===0?'disabled':''} title="Réserver cet article (envoi immédiat au +228 92 87 16 05)">
+            ${p.stock === 0 ? 'Indisponible' : 'Réserver'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          <button class="btn-addcart" data-id="${p.id}" ${p.stock===0?'disabled':''} title="Ajouter au panier (finalisation groupée au +228 93 38 75 95)" aria-label="Ajouter au panier">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          </button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+/* ===========================================================
+   Modal réservation
+   =========================================================== */
+let currentProduct = null;
+let currentQty = 1;
+
+function openReserve(id) {
+  currentProduct = PRODUCTS.find(p => p.id === id);
+  if (!currentProduct) return;
+  currentQty = 1;
+
+  $('#ppImg').src = `products/${currentProduct.img}`;
+  $('#ppImg').onerror = function() {
+    this.onerror = null;
+    this.src = placeholder(currentProduct.icon, currentProduct.name);
+  };
+  $('#ppName').textContent = currentProduct.name;
+  $('#ppPrice').textContent = fmt(currentProduct.pricePromo);
+  $('#ppMeta').innerHTML = `Garantie ${currentProduct.warranty} mois · ${currentProduct.stock} en stock`;
+
+  $('#qtyVal').textContent = 1;
+  $('#qtyStock').textContent = `Max : ${currentProduct.stock}`;
+  updateTotal();
+
+  // Date par défaut : demain
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  $('#rDate').value = tomorrow.toISOString().split('T')[0];
+  $('#rDate').min = new Date().toISOString().split('T')[0];
+
+  $('#reserveModal').classList.add('open');
+}
+
+function closeReserve() {
+  $('#reserveModal').classList.remove('open');
+  $('#reserveForm').reset();
+}
+
+function updateTotal() {
+  if (!currentProduct) return;
+  $('#totalPrice').textContent = fmt(currentProduct.pricePromo * currentQty);
+}
+
+$('#qtyMinus').addEventListener('click', () => {
+  if (currentQty > 1) currentQty--;
+  $('#qtyVal').textContent = currentQty;
+  updateTotal();
+});
+$('#qtyPlus').addEventListener('click', () => {
+  if (currentQty < currentProduct.stock) currentQty++;
+  $('#qtyVal').textContent = currentQty;
+  updateTotal();
+});
+$('#closeModal').addEventListener('click', closeReserve);
+$('#cancelReserve').addEventListener('click', closeReserve);
+$('#reserveModal').addEventListener('click', e => {
+  if (e.target.id === 'reserveModal') closeReserve();
+});
+
+/* ===========================================================
+   Panier de réservations
+   =========================================================== */
+let cart = [];
+
+function addToCart(item) {
+  const existing = cart.find(c => c.id === item.id);
+  if (existing) {
+    existing.qty += item.qty;
+  } else {
+    cart.push(item);
+  }
+  updateCartUI();
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(c => c.id !== id);
+  updateCartUI();
+}
+
+function updateCartUI() {
+  const count = cart.reduce((s, c) => s + c.qty, 0);
+  const total = cart.reduce((s, c) => s + c.qty * c.pricePromo, 0);
+  $('#cartCount').textContent = count;
+  $('#cartTotal').textContent = fmt(total);
+
+  // Afficher le formulaire client seulement si panier non vide
+  $('#clientFormWrap').style.display = cart.length ? 'block' : 'none';
+
+  const body = $('#cartBody');
+  if (!cart.length) {
+    body.innerHTML = `
+      <div class="cart-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+        <p>Votre panier est vide.<br>Parcourez le catalogue et réservez vos articles.</p>
+      </div>`;
+    return;
+  }
+  body.innerHTML = cart.map(c => `
+    <div class="cart-item">
+      <img src="products/${c.img}" onerror="this.onerror=null;this.src='${placeholder(c.icon, c.name)}';" alt="${c.name}">
+      <div class="cart-item-info">
+        <h4>${c.name}</h4>
+        <div class="ci-meta">${c.qty} × ${fmt(c.pricePromo)} · Garantie ${c.warranty} mois</div>
+        <div class="ci-price">${fmt(c.qty * c.pricePromo)}</div>
+      </div>
+      <button class="cart-item-remove" data-id="${c.id}" aria-label="Retirer">&times;</button>
+    </div>
+  `).join('');
+
+  $$('.cart-item-remove').forEach(b => {
+    b.addEventListener('click', () => removeFromCart(b.dataset.id));
+  });
+}
+
+/* ===========================================================
+   Envoi WhatsApp
+   - Réservations individuelles  → +228 92 87 16 05
+   - Finalisation (panier global) → +228 93 38 75 95
+   =========================================================== */
+const WHATSAPP_RESERVATION_NUMBER = '22892871605'; // +228 92 87 16 05 (réservations individuelles)
+const WHATSAPP_FINALIZATION_NUMBER = '22893387595'; // +228 93 38 75 95 (finalisation du panier)
+
+function sendWhatsApp(message, number = WHATSAPP_RESERVATION_NUMBER) {
+  const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  // Ouvre WhatsApp dans un nouvel onglet (mobile = app, desktop = WhatsApp Web)
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/* ===========================================================
+   Génération du reçu PDF (jsPDF)
+   - type : 'single' (réservation individuelle) ou 'cart' (finalisation panier)
+   - items : tableau d'articles { name, qty, pricePromo, warranty }
+   - client : { name, phone, email, date, note }
+   =========================================================== */
+function generateReceiptPDF(type, items, client) {
+  if (typeof window.jspdf === 'undefined') {
+    console.error('jsPDF non chargé');
+    showToast('Impossible de générer le reçu (bibliothèque PDF manquante).', 4000);
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210;
+  const pageH = 297;
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+
+  // ---- Couleurs ----
+  const green900 = [11, 61, 46];
+  const green700 = [17, 113, 74];
+  const gold     = [212, 160, 23];
+  const goldSoft = [243, 210, 122];
+  const ink      = [28, 38, 32];
+  const inkSoft  = [81, 99, 90];
+  const line     = [227, 220, 205];
+  const cream    = [251, 247, 239];
+  const red      = [192, 57, 43];
+
+  // ---- Numéro de reçu + date ----
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const receiptNum = `REC-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+  // ---- Code de vérification alphanumérique unique (REA-XXXXXX) ----
+  // Caractères sans ambigüité (pas de 0/O, 1/I/L)
+  const codeChars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let securityCode = '';
+  for (let i = 0; i < 6; i++) {
+    securityCode += codeChars.charAt(Math.floor(Math.random() * codeChars.length));
+  }
+  const receiptCode = `REA-${securityCode}`;
+
+  // ---- QR code encodant les infos du reçu ----
+  let qrDataUrl = null;
+  try {
+    const qrPayload = JSON.stringify({
+      shop: 'ETS EL ARAFAT',
+      code: receiptCode,
+      receipt: receiptNum,
+      date: dateStr,
+      total: items.reduce((s, it) => s + it.pricePromo * it.qty, 0),
+      items: items.length
+    });
+    // Élément temporaire attaché au DOM (requis par certaines versions de qrcodejs)
+    const tmpDiv = document.createElement('div');
+    tmpDiv.style.position = 'absolute';
+    tmpDiv.style.left = '-9999px';
+    tmpDiv.style.top = '0';
+    tmpDiv.style.width = '200px';
+    tmpDiv.style.height = '200px';
+    document.body.appendChild(tmpDiv);
+
+    new QRCode(tmpDiv, {
+      text: qrPayload,
+      width: 200,
+      height: 200,
+      colorDark: '#0b3d2e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    // Récupérer l'image générée (canvas en priorité, img en fallback)
+    const qrCanvas = tmpDiv.querySelector('canvas');
+    if (qrCanvas) {
+      qrDataUrl = qrCanvas.toDataURL('image/png');
+    } else {
+      const qrImg = tmpDiv.querySelector('img');
+      if (qrImg && qrImg.src) qrDataUrl = qrImg.src;
+    }
+    // Nettoyer le DOM
+    document.body.removeChild(tmpDiv);
+  } catch (e) {
+    console.warn('QR code non généré:', e);
+  }
+
+  // ---- En-tête : bandeau vert + logo + titre ----
+  doc.setFillColor(...green900);
+  doc.rect(0, 0, pageW, 38, 'F');
+  // Bande or en bas du header
+  doc.setFillColor(...gold);
+  doc.rect(0, 38, pageW, 2.5, 'F');
+
+  // Cercle logo
+  doc.setFillColor(...gold);
+  doc.circle(margin + 11, 19, 11, 'F');
+  doc.setTextColor(...green900);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('EA', margin + 11, 21, { align: 'center' });
+
+  // Nom boutique
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text('ETS EL ARAFAT', margin + 28, 16);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...goldSoft);
+  doc.text('Boutique & Réservations en ligne', margin + 28, 23);
+  doc.setFontSize(9);
+  doc.text('Marché central — Boutique n°24  ·  Lun–Sam : 8h00 – 19h00', margin + 28, 29);
+
+  // Titre du reçu (à droite)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(255, 255, 255);
+  doc.text(type === 'cart' ? 'REÇU DE FINALISATION' : 'REÇU DE RÉSERVATION', pageW - margin, 16, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...goldSoft);
+  doc.text(`N° ${receiptNum}`, pageW - margin, 23, { align: 'right' });
+  doc.text(`Émis le ${dateStr} à ${timeStr}`, pageW - margin, 29, { align: 'right' });
+
+  // ---- Section client ----
+  let y = 52;
+  doc.setTextColor(...green900);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('INFORMATIONS CLIENT', margin, y);
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y + 1.5, margin + 55, y + 1.5);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...ink);
+  const clientLines = [
+    ['Nom complet',    client.name  || '—'],
+    ['Téléphone',      client.phone || '—'],
+    ['Email',          client.email || '—'],
+    ['Date de retrait',client.date  || '—'],
+  ];
+  clientLines.forEach(([label, val]) => {
+    doc.setTextColor(...inkSoft);
+    doc.text(`${label} :`, margin, y);
+    doc.setTextColor(...ink);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(val), margin + 38, y);
+    doc.setFont('helvetica', 'normal');
+    y += 6;
+  });
+  if (client.note) {
+    doc.setTextColor(...inkSoft);
+    doc.text('Notes :', margin, y);
+    doc.setTextColor(...ink);
+    const noteLines = doc.splitTextToSize(client.note, contentW - 38);
+    doc.text(noteLines, margin + 38, y);
+    y += 6 * noteLines.length;
+  }
+
+  // ---- Section articles ----
+  y += 6;
+  doc.setTextColor(...green900);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('ARTICLES RÉSERVÉS', margin, y);
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.6);
+  doc.line(margin, y + 1.5, margin + 45, y + 1.5);
+  y += 8;
+
+  // En-tête du tableau
+  const colX = {
+    name: margin,
+    qty:  margin + contentW * 0.55,
+    unit: margin + contentW * 0.70,
+    sub:  margin + contentW * 0.85,
+  };
+  const colW = {
+    name: contentW * 0.55,
+    qty:  contentW * 0.15,
+    unit: contentW * 0.15,
+    sub:  contentW * 0.15,
+  };
+
+  doc.setFillColor(...green900);
+  doc.rect(margin, y - 5, contentW, 8, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text('ARTICLE', colX.name + 2, y);
+  doc.text('QTÉ',     colX.qty  + 2, y);
+  doc.text('PRIX U.', colX.unit + 2, y);
+  doc.text('SOUS-TOTAL', colX.sub + 2, y);
+  y += 3;
+
+  // Lignes du tableau
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  let total = 0;
+  let totalQty = 0;
+  items.forEach((it, idx) => {
+    const sub = it.pricePromo * it.qty;
+    total += sub;
+    totalQty += it.qty;
+
+    // Vérifier saut de page
+    if (y > pageH - 60) {
+      doc.addPage();
+      y = margin + 5;
+    }
+
+    // Fond alterné
+    if (idx % 2 === 0) {
+      doc.setFillColor(...cream);
+      doc.rect(margin, y, contentW, 12, 'F');
+    }
+
+    doc.setTextColor(...ink);
+    doc.setFont('helvetica', 'bold');
+    const nameLines = doc.splitTextToSize(it.name, colW.name - 4);
+    doc.text(nameLines[0], colX.name + 2, y + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...inkSoft);
+    doc.setFontSize(8.5);
+    doc.text(`Garantie ${it.warranty} mois`, colX.name + 2, y + 9);
+    doc.setFontSize(9.5);
+
+    doc.setTextColor(...ink);
+    doc.text(String(it.qty),                colX.qty  + 2, y + 5);
+    doc.text(fmt(it.pricePromo),            colX.unit + 2, y + 5);
+    doc.text(fmt(sub),                      colX.sub  + 2, y + 5);
+
+    y += 12;
+  });
+
+  // Ligne de séparation
+  doc.setDrawColor(...line);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, margin + contentW, y);
+  y += 7;
+
+  // ---- Total ----
+  doc.setFillColor(...green900);
+  doc.rect(colX.sub - 4, y - 5, colW.sub + 4, 12, 'F');
+  doc.setTextColor(...goldSoft);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('TOTAL À PAYER', colX.sub - 2, y, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(fmt(total), colX.sub - 2, y + 5, { align: 'right' });
+
+  // Infos complémentaires à gauche du total
+  doc.setTextColor(...inkSoft);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Nombre d'articles : ${items.length} (${totalQty} unité${totalQty>1?'s':''})`, margin, y + 2);
+  doc.text(`Date de retrait souhaitée : ${client.date || '—'}`, margin, y + 7);
+
+  y += 20;
+
+  // ---- Statut ----
+  doc.setFillColor(...cream);
+  doc.roundedRect(margin, y, contentW, 14, 2, 2, 'F');
+  doc.setDrawColor(...green700);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(margin, y, contentW, 14, 2, 2, 'S');
+  doc.setTextColor(...green700);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('✓  RÉSERVATION ENREGISTRÉE', margin + 4, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...inkSoft);
+  doc.text('Merci de présenter ce reçu lors du retrait en boutique. Le paiement s\'effectue sur place.', margin + 4, y + 11);
+
+  y += 22;
+
+  // ---- Code de vérification + QR code ----
+  // Cartouche code à gauche
+  const codeBoxH = 30;
+  const codeBoxW = contentW * 0.62;
+  const qrBoxSize = 30;
+
+  doc.setFillColor(...green900);
+  doc.roundedRect(margin, y, codeBoxW, codeBoxH, 2, 2, 'F');
+
+  doc.setTextColor(...goldSoft);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('CODE DE VÉRIFICATION', margin + 5, y + 7);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text(receiptCode, margin + 5, y + 18);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...goldSoft);
+  doc.text(`Référence : ${receiptNum}`, margin + 5, y + 24);
+  doc.text('À présenter lors du retrait en boutique', margin + 5, y + 28);
+
+  // QR code à droite
+  if (qrDataUrl) {
+    const qrX = margin + codeBoxW + 4;
+    const qrY = y;
+    // Fond blanc derrière le QR
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(qrX, qrY, qrBoxSize, qrBoxSize, 1, 1, 'F');
+    doc.addImage(qrDataUrl, 'PNG', qrX + 2, qrY + 2, qrBoxSize - 4, qrBoxSize - 4);
+    doc.setTextColor(...inkSoft);
+    doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+    doc.text('Scannez pour vérifier', qrX + qrBoxSize / 2, qrY + qrBoxSize + 4, { align: 'center' });
+  } else {
+    // Fallback : afficher le code en grand
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin + codeBoxW + 4, y, qrBoxSize, qrBoxSize, 1, 1, 'F');
+    doc.setTextColor(...green900);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(receiptCode.split('-')[1] || '—', margin + codeBoxW + 4 + qrBoxSize / 2, y + qrBoxSize / 2 + 2, { align: 'center' });
+  }
+
+  y += codeBoxH + 12;
+
+  // ---- Pied de page : contacts ----
+  doc.setFillColor(...green900);
+  doc.rect(0, pageH - 28, pageW, 28, 'F');
+  doc.setFillColor(...gold);
+  doc.rect(0, pageH - 30, pageW, 2, 'F');
+
+  doc.setTextColor(...goldSoft);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('CONTACTS ETS EL ARAFAT', margin, pageH - 20);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text('WhatsApp réservations : +228 92 87 16 05', margin, pageH - 13);
+  doc.text('WhatsApp finalisation  : +228 93 38 75 95', margin, pageH - 8);
+  doc.text('Email : contact@etselarafat.com', margin + 95, pageH - 13);
+  doc.text('Horaires : Lun–Sam, 8h00–19h00', margin + 95, pageH - 8);
+
+  // ---- Retourne le doc PDF + métadonnées (le téléchargement est déclenché séparément) ----
+  const filename = `Recu_${receiptNum}_${securityCode}.pdf`;
+  const totalAmount = items.reduce((s, it) => s + it.pricePromo * it.qty, 0);
+  return { doc, receiptNum, receiptCode, filename, total: totalAmount, qrDataUrl, dateStr, timeStr, type, items, client };
+}
+
+/* Télécharge le PDF reçu (déclenché par le bouton dans l'aperçu — clic utilisateur direct) */
+function downloadReceiptPDF(receiptData) {
+  if (!receiptData || !receiptData.doc) {
+    showToast('Impossible de télécharger le reçu.', 3000);
+    return;
+  }
+  try {
+    receiptData.doc.save(receiptData.filename);
+    showToast(`Reçu téléchargé : ${receiptData.filename}`, 3500);
+  } catch (e) {
+    console.error('Erreur lors du téléchargement du PDF:', e);
+    showToast('Erreur lors du téléchargement du reçu.', 3000);
+  }
+}
+
+/* Imprime le contenu de l'aperçu du reçu */
+function printReceiptPreview() {
+  const preview = document.getElementById('receiptPreviewContent');
+  if (!preview) return;
+  const win = window.open('', '_blank', 'noopener,noreferrer');
+  if (!win) {
+    showToast('Veuillez autoriser les popups pour imprimer.', 4000);
+    return;
+  }
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="fr"><head><meta charset="UTF-8">
+    <title>Reçu ETS EL Arafat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Helvetica', Arial, sans-serif; color: #1c2620; background: #fff; }
+      ${receiptPrintCSS()}
+    </style></head><body>${preview.innerHTML}</body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 400);
+}
+
+/* CSS injecté dans la fenêtre d'impression */
+function receiptPrintCSS() {
+  return `
+    .receipt {
+      width: 210mm; min-height: 297mm; margin: 0 auto;
+      background: #fff; position: relative; padding: 0 0 40mm;
+      box-shadow: none; font-family: 'Helvetica', Arial, sans-serif;
+      border-radius: 0; max-width: none;
+    }
+    .receipt-header { background: #0b3d2e; color: #fff; padding: 14mm 14mm 8mm; position: relative; }
+    .receipt-header::after { content:''; position:absolute; left:0; right:0; bottom:0; height:3mm; background:#d4a017; }
+    .receipt-header-row { display:flex; justify-content:space-between; align-items:flex-start; }
+    .receipt-brand-block { display:flex; align-items:center; gap:4mm; }
+    .receipt-logo { width:18mm; height:18mm; border-radius:50%; background:#d4a017; color:#0b3d2e; font-weight:700; font-size:6mm; display:inline-grid; place-items:center; }
+    .receipt-brand-text h1 { font-size:9mm; margin:0 0 1mm; color:#fff; font-family:'Helvetica',sans-serif; }
+    .receipt-brand-text small { color:#f3d27a; font-size:3.5mm; display:block; margin-bottom:1mm; }
+    .receipt-brand-text .addr { color:rgba(255,255,255,.75); font-size:3.2mm; }
+    .receipt-meta { text-align:right; color:#fff; }
+    .receipt-meta h2 { font-size:6mm; margin:0 0 2mm; color:#fff; }
+    .receipt-meta small { color:#f3d27a; font-size:3mm; display:block; margin-bottom:1mm; }
+    .receipt-meta .receipt-num { color:#fff; font-size:3.2mm; margin-top:1mm; font-weight:600; }
+    .receipt-section-title { color:#0b3d2e; font-weight:700; font-size:5mm; margin:6mm 14mm 3mm; padding-bottom:1mm; border-bottom:0.6mm solid #d4a017; display:inline-block; }
+    .receipt-client { padding: 0 14mm; }
+    .receipt-client-row { font-size:4mm; margin-bottom:1.5mm; color:#1c2620; display:flex; gap:3mm; }
+    .receipt-client-row .lbl { color:#51635a; min-width:32mm; font-weight:600; }
+    .receipt-client-row .val { font-weight:700; flex:1; }
+    .receipt-table { width: calc(100% - 28mm); margin: 2mm 14mm 0; border-collapse: collapse; }
+    .receipt-table thead th { background:#0b3d2e; color:#fff; padding:2mm 3mm; font-size:3.5mm; text-align:left; }
+    .receipt-table thead th.num { text-align:right; }
+    .receipt-table tbody td { padding:2mm 3mm; font-size:3.5mm; border-bottom:0.2mm solid #e3dccd; vertical-align: top; }
+    .receipt-table tbody tr:nth-child(odd) td { background:#fbf7ef; }
+    .receipt-table td.num { text-align:right; }
+    .receipt-totals { padding: 3mm 14mm; display:flex; justify-content:space-between; align-items:center; }
+    .receipt-totals-info { font-size:3.5mm; color:#51635a; line-height:1.7; }
+    .receipt-total-amount { background:#0b3d2e; color:#fff; padding:2mm 6mm; border-radius:1mm; text-align:right; }
+    .receipt-total-amount small { color:#f3d27a; font-size:2.5mm; display:block; }
+    .receipt-total-amount strong { font-size:5mm; font-weight:700; }
+    .receipt-status { margin: 4mm 14mm; background:#fbf7ef; border:0.4mm solid #11714a; border-radius:1mm; padding:3mm 4mm; display:flex; align-items:center; gap:3mm; }
+    .receipt-status .check { width:7mm; height:7mm; background:#11714a; color:#fff; border-radius:50%; display:inline-grid; place-items:center; }
+    .receipt-status strong { color:#11714a; font-size:4mm; display:block; }
+    .receipt-status small { display:block; color:#51635a; font-size:3mm; margin-top:1mm; }
+    .receipt-code-wrap { margin: 4mm 14mm; display:flex; gap:3mm; align-items:stretch; }
+    .receipt-code-box { flex:1; background:#0b3d2e; color:#fff; padding:3mm 4mm; border-radius:1mm; display:flex; flex-direction:column; justify-content:center; }
+    .receipt-code-box .lbl { color:#f3d27a; font-size:2.5mm; text-transform:uppercase; letter-spacing:.1em; margin-bottom:1mm; }
+    .receipt-code-box .code { color:#fff; font-size:9mm; font-weight:700; letter-spacing:1mm; margin-bottom:1.5mm; font-family:'Courier New',monospace; }
+    .receipt-code-box .ref { color:#f3d27a; font-size:2.8mm; display:block; }
+    .receipt-qr { width:25mm; height:25mm; background:#fff; padding:1mm; border-radius:1mm; }
+    .receipt-qr img { width:100%; height:100%; }
+    .receipt-qr-placeholder { width:100%; height:100%; display:grid; place-items:center; color:#0b3d2e; font-weight:700; font-size:3mm; text-align:center; background:#fbf7ef; }
+    .receipt-footer { position:absolute; bottom:0; left:0; right:0; background:#0b3d2e; color:#fff; padding:5mm 14mm; }
+    .receipt-footer::before { content:''; position:absolute; top:0; left:0; right:0; height:2mm; background:#d4a017; }
+    .receipt-footer h4 { color:#f3d27a; font-size:4mm; margin:0 0 2mm; }
+    .receipt-footer-row { display:flex; gap:6mm; flex-wrap:wrap; font-size:3mm; color:rgba(255,255,255,.85); }
+    .receipt-footer-row > div { display:flex; flex-direction:column; gap:0.5mm; }
+    @page { size: A4; margin: 0; }
+  `;
+}
+
+/* ===========================================================
+   Affiche l'aperçu HTML du reçu dans une modale
+   =========================================================== */
+let currentReceiptData = null;
+
+function showReceiptPreview(receiptData) {
+  if (!receiptData) return;
+  currentReceiptData = receiptData;
+
+  const { type, items, client, receiptNum, receiptCode, dateStr, timeStr, qrDataUrl } = receiptData;
+  const total = items.reduce((s, it) => s + it.pricePromo * it.qty, 0);
+  const totalQty = items.reduce((s, it) => s + it.qty, 0);
+  const titleType = type === 'cart' ? 'REÇU DE FINALISATION' : 'REÇU DE RÉSERVATION';
+
+  // Construction du HTML
+  const html = `
+    <div class="receipt">
+      <div class="receipt-header">
+        <div class="receipt-header-row">
+          <div class="receipt-brand-block">
+            <div class="receipt-logo">EA</div>
+            <div class="receipt-brand-text">
+              <h1>ETS EL ARAFAT</h1>
+              <small>Boutique &amp; Réservations en ligne</small>
+              <div class="addr">Marché central — Boutique n°24 · Lun–Sam : 8h00 – 19h00</div>
+            </div>
+          </div>
+          <div class="receipt-meta">
+            <h2>${titleType}</h2>
+            <small>N° ${receiptNum}</small>
+            <small>Émis le ${dateStr} à ${timeStr}</small>
+            <div class="receipt-num">Code : ${receiptCode}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipt-section-title">Informations client</div>
+      <div class="receipt-client">
+        <div class="receipt-client-row"><span class="lbl">Nom complet</span><span class="val">${escapeHTML(client.name) || '—'}</span></div>
+        <div class="receipt-client-row"><span class="lbl">Téléphone</span><span class="val">${escapeHTML(client.phone) || '—'}</span></div>
+        <div class="receipt-client-row"><span class="lbl">Email</span><span class="val">${escapeHTML(client.email) || '—'}</span></div>
+        <div class="receipt-client-row"><span class="lbl">Date de retrait</span><span class="val">${client.date || '—'}</span></div>
+        ${client.note ? `<div class="receipt-client-row"><span class="lbl">Notes</span><span class="val">${escapeHTML(client.note)}</span></div>` : ''}
+      </div>
+
+      <div class="receipt-section-title">Articles réservés</div>
+      <table class="receipt-table">
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th class="num">Qté</th>
+            <th class="num">Prix unitaire</th>
+            <th class="num">Sous-total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(it => `
+            <tr>
+              <td class="name-cell">${escapeHTML(it.name)}<small>Garantie ${it.warranty} mois</small></td>
+              <td class="num">${it.qty}</td>
+              <td class="num">${fmt(it.pricePromo)}</td>
+              <td class="num">${fmt(it.qty * it.pricePromo)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="receipt-totals">
+        <div class="receipt-totals-info">
+          <div>Nombre d'articles : <strong>${items.length}</strong> (${totalQty} unité${totalQty>1?'s':''})</div>
+          <div>Date de retrait souhaitée : <strong>${client.date || '—'}</strong></div>
+        </div>
+        <div class="receipt-total-amount">
+          <small>Total à payer</small>
+          <strong>${fmt(total)}</strong>
+        </div>
+      </div>
+
+      <div class="receipt-status">
+        <div class="check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div>
+          <strong>RÉSERVATION ENREGISTRÉE</strong>
+          <small>Merci de présenter ce reçu lors du retrait en boutique. Le paiement s'effectue sur place.</small>
+        </div>
+      </div>
+
+      <div class="receipt-code-wrap">
+        <div class="receipt-code-box">
+          <div class="lbl">Code de vérification</div>
+          <div class="code">${receiptCode}</div>
+          <div class="ref">Référence : ${receiptNum}</div>
+          <div class="ref">À présenter lors du retrait en boutique</div>
+        </div>
+        <div class="receipt-qr">
+          ${qrDataUrl
+            ? `<img src="${qrDataUrl}" alt="QR code du reçu ${receiptCode}">`
+            : `<div class="receipt-qr-placeholder">Code :<br>${receiptCode}</div>`}
+        </div>
+      </div>
+
+      <div class="receipt-footer">
+        <h4>Contacts ETS EL ARAFAT</h4>
+        <div class="receipt-footer-row">
+          <div>
+            <div>WhatsApp réservations : +228 92 87 16 05</div>
+            <div>WhatsApp finalisation : +228 93 38 75 95</div>
+          </div>
+          <div>
+            <div>Email : contact@etselarafat.com</div>
+            <div>Horaires : Lun–Sam, 8h00–19h00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  $('#receiptPreviewContent').innerHTML = html;
+  $('#receiptPreviewTitle').textContent = `${titleType} — ${receiptCode}`;
+  $('#receiptPreviewModal').classList.add('open');
+  // Scroll en haut
+  $('.receipt-preview-scroll').scrollTop = 0;
+}
+
+/* Échappe le HTML pour éviter les injections dans l'aperçu */
+function escapeHTML(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* Ferme l'aperçu du reçu */
+function closeReceiptPreview() {
+  $('#receiptPreviewModal').classList.remove('open');
+  currentReceiptData = null;
+}
+
+/* Branchement des boutons de la modale d'aperçu */
+$('#rpClose').addEventListener('click', closeReceiptPreview);
+$('#rpDownload').addEventListener('click', () => downloadReceiptPDF(currentReceiptData));
+$('#rpPrint').addEventListener('click', printReceiptPreview);
+$('#receiptPreviewModal').addEventListener('click', e => {
+  if (e.target.id === 'receiptPreviewModal') closeReceiptPreview();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#receiptPreviewModal').classList.contains('open')) {
+    closeReceiptPreview();
+  }
+});
+
+function buildSingleReservationMessage(p, client, qty) {
+  const total = p.pricePromo * qty;
+  const lines = [
+    '*NOUVELLE RÉSERVATION — ETS EL ARAFAT*',
+    '━━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '🛍️ *ARTICLE RÉSERVÉ*',
+    `• Produit : ${p.name}`,
+    `• Catégorie : ${p.catLabel}`,
+    `• Quantité : ${qty}`,
+    `• Prix unitaire promo : ${fmt(p.pricePromo)}`,
+    `• Ancien prix : ${fmt(p.priceOld)}`,
+    `• Garantie : ${p.warranty} mois`,
+    `• Total : ${fmt(total)}`,
+    '',
+    '👤 *CLIENT*',
+    `• Nom : ${client.name}`,
+    `• Téléphone : ${client.phone}`,
+    client.email ? `• Email : ${client.email}` : null,
+    `• Date de retrait souhaitée : ${client.date}`,
+    client.note ? `• Notes : ${client.note}` : null,
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━',
+    '_Réservation envoyée depuis la boutique en ligne ETS EL Arafat._'
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
+function buildCartReservationMessage(client) {
+  if (!cart.length) return '';
+  const count = cart.reduce((s,c)=>s+c.qty,0);
+  const total = cart.reduce((s,c)=>s+c.qty*c.pricePromo,0);
+
+  const lines = [
+    '*NOUVELLE RÉSERVATION — ETS EL ARAFAT*',
+    '━━━━━━━━━━━━━━━━━━━━━',
+    '',
+    `🛒 *RÉCAPITULATIF (${count} article${count>1?'s':''})*`
+  ];
+
+  cart.forEach((c, i) => {
+    lines.push('');
+    lines.push(`${i+1}. ${c.name}`);
+    lines.push(`   • Quantité : ${c.qty}`);
+    lines.push(`   • Prix unitaire : ${fmt(c.pricePromo)}`);
+    lines.push(`   • Garantie : ${c.warranty} mois`);
+    lines.push(`   • Sous-total : ${fmt(c.qty * c.pricePromo)}`);
+  });
+
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(`💰 *TOTAL À PAYER : ${fmt(total)}*`);
+  lines.push('');
+  lines.push('👤 *INFORMATIONS CLIENT*');
+  if (client?.name)  lines.push(`• Nom : ${client.name}`);
+  if (client?.phone) lines.push(`• Téléphone : ${client.phone}`);
+  if (client?.email) lines.push(`• Email : ${client.email}`);
+  if (client?.date)  lines.push(`• Date de retrait souhaitée : ${client.date}`);
+  if (client?.note)  lines.push(`• Notes : ${client.note}`);
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('_Réservation envoyée depuis la boutique en ligne ETS EL Arafat._');
+  return lines.join('\n');
+}
+
+/* Confirmer réservation individuelle → envoyer directement sur WhatsApp au +228 92 87 16 05 */
+$('#confirmReserve').addEventListener('click', () => {
+  const form = $('#reserveForm');
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  if (!currentProduct) return;
+
+  const client = {
+    name: $('#rName').value,
+    phone: $('#rPhone').value,
+    email: $('#rEmail').value,
+    date: $('#rDate').value,
+    note: $('#rNote').value,
+  };
+
+  // Envoi immédiat sur WhatsApp au +228 92 87 16 05 (réservation individuelle)
+  const message = buildSingleReservationMessage(currentProduct, client, currentQty);
+  sendWhatsApp(message, WHATSAPP_RESERVATION_NUMBER);
+
+  closeReserve();
+  showToast(`Réservation envoyée au +228 92 87 16 05.`, 4500);
+});
+
+/* ===========================================================
+   Drawer panier
+   =========================================================== */
+$('#openCart').addEventListener('click', () => {
+  $('#cartDrawer').classList.add('open');
+  $('#drawerBackdrop').classList.add('open');
+});
+$('#closeDrawer').addEventListener('click', closeDrawer);
+$('#drawerBackdrop').addEventListener('click', closeDrawer);
+function closeDrawer() {
+  $('#cartDrawer').classList.remove('open');
+  $('#drawerBackdrop').classList.remove('open');
+}
+
+/* Finaliser la réservation globale → envoyer WhatsApp + afficher l'aperçu du reçu */
+$('#validateCart').addEventListener('click', () => {
+  if (!cart.length) {
+    showToast('Votre panier est vide.');
+    return;
+  }
+
+  // Vérifier les infos client
+  const name  = $('#cartName').value.trim();
+  const phone = $('#cartPhone').value.trim();
+  const date  = $('#cartDate').value;
+  if (!name || !phone || !date) {
+    showToast('Veuillez remplir votre nom, téléphone et date de retrait.', 4000);
+    if (!name) $('#cartName').focus();
+    else if (!phone) $('#cartPhone').focus();
+    else $('#cartDate').focus();
+    return;
+  }
+
+  const client = { name, phone, date, email: '', note: '' };
+
+  // Snapshot des articles pour le reçu (avant vidage du panier)
+  const itemsForReceipt = cart.map(c => ({
+    name: c.name,
+    qty: c.qty,
+    pricePromo: c.pricePromo,
+    warranty: c.warranty
+  }));
+
+  // 1. Envoi WhatsApp au +228 93 38 75 95 (ouvre un nouvel onglet — autorisé car clic utilisateur)
+  const message = buildCartReservationMessage(client);
+  sendWhatsApp(message, WHATSAPP_FINALIZATION_NUMBER);
+
+  // 2. Génération du reçu PDF + affichage de l'aperçu HTML dans une modale
+  let receiptResult = null;
+  try {
+    receiptResult = generateReceiptPDF('cart', itemsForReceipt, client);
+  } catch (e) {
+    console.error('Erreur lors de la génération du reçu PDF:', e);
+  }
+
+  // 3. Afficher l'aperçu du reçu (l'utilisateur pourra le télécharger/imprimer depuis la modale)
+  if (receiptResult) {
+    showReceiptPreview(receiptResult);
+    showToast(`Réservation finalisée ! Code : ${receiptResult.receiptCode}`, 5000);
+  } else {
+    showToast(`Réservation envoyée au +228 93 38 75 95.`, 5000);
+  }
+
+  // 4. Réinitialisation
+  cart = [];
+  $('#cartName').value = '';
+  $('#cartPhone').value = '';
+  $('#cartDate').value = '';
+  updateCartUI();
+  closeDrawer();
+});
+
+/* ===========================================================
+   Recherche + filtres catégories
+   =========================================================== */
+$('#searchInput').addEventListener('input', e => {
+  const term = e.target.value;
+  const active = $('.cat-pill.active').dataset.target;
+  renderCatalog(active, term);
+});
+
+$('#catNav').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-pill');
+  if (!btn) return;
+  $$('.cat-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const term = $('#searchInput').value;
+  renderCatalog(btn.dataset.target, term);
+  // Scroll doux vers le catalogue
+  if (btn.dataset.target !== 'all') {
+    const el = document.getElementById(btn.dataset.target);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  } else {
+    window.scrollTo({ top: 0, behavior:'smooth' });
+  }
+});
+
+/* ===========================================================
+   Toast
+   =========================================================== */
+let toastTimer;
+function showToast(msg, duration=3000) {
+  $('#toastMsg').textContent = msg;
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), duration);
+}
+
+/* ===========================================================
+   Init
+   =========================================================== */
+$('#year').textContent = new Date().getFullYear();
+renderCatalog();
+updateCartUI();
+</script>
+</body>
+</html>

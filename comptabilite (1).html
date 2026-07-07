@@ -1,0 +1,2554 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETS EL ARAFAT — Comptabilité & Gestion des ventes</title>
+  <meta name="description" content="Scanner les QR codes des reçus, enregistrer les ventes, suivre le stock et calculer la commission vendeur (5%). Authentification 30 jours. Compte d'essai intégré.">
+  <!-- jsQR : décodage des QR codes via caméra -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <style>
+    /* ===========================================================
+       ETS EL ARAFAT — Comptabilité
+       Palette alignée sur index.html (vert émeraude + or)
+       =========================================================== */
+    :root {
+      --green-900: #0b3d2e;
+      --green-700: #11714a;
+      --green-500: #1aa05a;
+      --gold:      #d4a017;
+      --gold-soft: #f3d27a;
+      --cream:     #fbf7ef;
+      --paper:     #ffffff;
+      --ink:       #1c2620;
+      --ink-soft:  #51635a;
+      --line:      #e3dccd;
+      --danger:    #c0392b;
+      --danger-soft:#fdeceb;
+      --warning:   #d68910;
+      --info:      #2980b9;
+      --shadow-sm: 0 1px 2px rgba(11, 61, 46, .06);
+      --shadow-md: 0 6px 18px rgba(11, 61, 46, .10);
+      --shadow-lg: 0 18px 48px rgba(11, 61, 46, .18);
+      --radius:    14px;
+      --radius-sm: 10px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', 'Segoe UI', Tahoma, system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--cream);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .serif {
+      font-family: 'Playfair Display', Georgia, serif;
+      letter-spacing: -0.01em;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; }
+
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ---------------- TOPBAR ---------------- */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(11, 61, 46, .96);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      border-bottom: 2px solid var(--gold);
+    }
+    .topbar-inner {
+      display: flex; align-items: center;
+      gap: 18px; height: 64px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; font-size: 20px; color: #fff;
+    }
+    .brand-mark {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+      display: grid; place-items: center;
+      color: var(--green-900);
+      font-weight: 800; font-family: 'Playfair Display', serif;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .brand small {
+      display: block; font-size: 11px;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--gold-soft);
+      font-family: 'Inter', sans-serif; font-weight: 500;
+    }
+    .topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .top-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.12);
+      color: #fff; border: 1px solid rgba(255,255,255,.25);
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .15s;
+    }
+    .top-btn:hover { background: rgba(255,255,255,.22); }
+    .top-btn.danger { background: rgba(192, 57, 43, .35); border-color: rgba(192, 57, 43, .6); }
+    .top-btn.danger:hover { background: rgba(192, 57, 43, .55); }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--gold); color: var(--green-900);
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      transition: transform .15s;
+    }
+    .back-link:hover { transform: translateY(-1px); }
+
+    /* ---------------- HERO STATS ---------------- */
+    .hero-stats {
+      background: linear-gradient(135deg, var(--green-900), var(--green-700));
+      color: #fff;
+      padding: 32px 0 24px;
+      border-bottom: 3px solid var(--gold);
+    }
+    .hero-stats h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      margin-bottom: 6px;
+    }
+    .hero-stats p {
+      color: rgba(255,255,255,.85);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      backdrop-filter: blur(4px);
+    }
+    .stat-card .lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--gold-soft);
+      margin-bottom: 6px;
+    }
+    .stat-card .val {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .stat-card .sub {
+      font-size: 11px;
+      color: rgba(255,255,255,.7);
+      margin-top: 4px;
+    }
+    .stat-card.commission { background: linear-gradient(135deg, rgba(212,160,23,.25), rgba(212,160,23,.1)); border-color: var(--gold); }
+    .stat-card.commission .val { color: var(--gold-soft); }
+
+    /* ---------------- TABS ---------------- */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--paper);
+      border-bottom: 2px solid var(--line);
+      position: sticky; top: 64px; z-index: 30;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 0 0 auto;
+      padding: 14px 18px;
+      background: transparent;
+      border: 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: color .15s, border-color .15s;
+      display: inline-flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--green-700); }
+    .tab.active {
+      color: var(--green-900);
+      border-bottom-color: var(--gold);
+    }
+    .tab .badge {
+      background: var(--green-700);
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      min-width: 18px;
+      text-align: center;
+    }
+    .tab .badge.warn { background: var(--warning); }
+    .tab .badge.danger { background: var(--danger); }
+
+    /* ---------------- SECTIONS ---------------- */
+    main { padding: 24px 0 48px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 16px; margin-bottom: 18px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--line);
+    }
+    .section-head h2 {
+      font-size: clamp(20px, 3vw, 26px);
+      color: var(--green-900);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-head h2::before {
+      content: ''; width: 6px; height: 26px;
+      background: var(--gold); border-radius: 4px;
+    }
+    .section-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 700; font-size: 13px;
+      cursor: pointer; border: 0;
+      transition: transform .15s, background .2s, box-shadow .15s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-primary { background: var(--green-700); color: #fff; }
+    .btn-primary:hover { background: var(--green-900); }
+    .btn-gold { background: var(--gold); color: var(--green-900); }
+    .btn-gold:hover { background: #e0ad1f; }
+    .btn-ghost { background: var(--cream); color: var(--ink); border: 1px solid var(--line); }
+    .btn-ghost:hover { background: #efe9d8; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #a52f23; }
+
+    /* ---------------- SCANNER ---------------- */
+    .scanner-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .scanner-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .scanner-card h3 {
+      font-size: 18px; color: var(--green-900);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .video-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .video-wrap video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .video-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+    .scan-frame {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 65%; height: 65%;
+      border: 3px solid var(--gold);
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.4);
+    }
+    .scan-frame::before,
+    .scan-frame::after,
+    .scan-frame > span::before,
+    .scan-frame > span::after {
+      content: '';
+      position: absolute;
+      width: 24px; height: 24px;
+      border: 4px solid var(--gold-soft);
+    }
+    .scan-frame::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; border-top-left-radius: 8px; }
+    .scan-frame::after  { top: -3px; right: -3px; border-left: 0; border-bottom: 0; border-top-right-radius: 8px; }
+    .scan-frame > span::before { bottom: -3px; left: -3px; border-right: 0; border-top: 0; border-bottom-left-radius: 8px; }
+    .scan-frame > span::after  { bottom: -3px; right: -3px; border-left: 0; border-top: 0; border-bottom-right-radius: 8px; }
+    .scan-line {
+      position: absolute;
+      left: 5%; right: 5%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-soft), transparent);
+      top: 50%;
+      animation: scan 2s ease-in-out infinite;
+    }
+    @keyframes scan {
+      0%, 100% { top: 30%; }
+      50% { top: 70%; }
+    }
+    .scanner-status {
+      text-align: center;
+      font-size: 13px;
+      color: var(--ink-soft);
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--cream);
+      margin-bottom: 12px;
+    }
+    .scanner-status.success { background: #ecf6ef; color: var(--green-700); font-weight: 600; }
+    .scanner-status.error   { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+    .scanner-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .scanner-actions .btn { flex: 1; justify-content: center; min-width: 120px; }
+
+    /* Saisie manuelle */
+    .manual-entry {
+      display: flex; gap: 8px; align-items: flex-end;
+    }
+    .manual-entry .form-row { flex: 1; margin: 0; }
+    .manual-entry .btn { flex: 0 0 auto; }
+    .form-row { margin-bottom: 12px; }
+    .form-row label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .form-row input, .form-row select, .form-row textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: 14px; font-family: inherit;
+      background: #fff; color: var(--ink);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(26, 160, 90, .15);
+    }
+    .manual-hint {
+      font-size: 11px; color: var(--ink-soft);
+      margin-top: 8px; padding: 8px 10px;
+      background: var(--cream); border-radius: 6px;
+      border-left: 3px solid var(--gold);
+    }
+
+    /* ---------------- TABLES ---------------- */
+    .table-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .table-wrap { overflow-x: auto; }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    table.data thead th {
+      background: var(--green-900);
+      color: #fff;
+      padding: 12px 14px;
+      font-size: 11px;
+      text-align: left;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    table.data thead th.num { text-align: right; }
+    table.data tbody td {
+      padding: 11px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    table.data tbody tr:hover td { background: var(--cream); }
+    table.data tbody tr:last-child td { border-bottom: 0; }
+    table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    table.data .empty-row td {
+      text-align: center;
+      color: var(--ink-soft);
+      padding: 40px 20px;
+      font-style: italic;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .pill.ok { background: #ecf6ef; color: var(--green-700); }
+    .pill.warn { background: #fff7e0; color: var(--warning); }
+    .pill.danger { background: var(--danger-soft); color: var(--danger); }
+    .pill.gold { background: rgba(212,160,23,.18); color: #8a6500; }
+
+    .row-del {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--danger);
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all .15s;
+    }
+    .row-del:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    /* ---------------- STOCK CARDS ---------------- */
+    .stock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .stock-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .stock-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .stock-card .stock-cat {
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 4px;
+    }
+    .stock-card .stock-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--ink);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .stock-card .stock-row {
+      display: flex; justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .stock-card .stock-row .lbl { color: var(--ink-soft); }
+    .stock-card .stock-row .val { font-weight: 600; }
+    .stock-bar {
+      height: 6px;
+      background: var(--cream);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .stock-bar-fill {
+      height: 100%;
+      background: var(--green-500);
+      transition: width .3s, background .3s;
+    }
+    .stock-bar-fill.low { background: var(--warning); }
+    .stock-bar-fill.empty { background: var(--danger); }
+
+    /* ---------------- COMMISSION ---------------- */
+    .commission-summary {
+      background: linear-gradient(135deg, rgba(212,160,23,.15), rgba(212,160,23,.05));
+      border: 1px solid var(--gold);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+    .commission-summary .item .lbl {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #8a6500;
+      margin-bottom: 6px;
+    }
+    .commission-summary .item .val {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--green-900);
+    }
+    .commission-summary .item.highlight .val {
+      color: #8a6500;
+    }
+
+    /* Lignes de récap commission */
+    .comm-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12.5px; padding: 6px 0;
+      border-bottom: 1px dashed rgba(11, 61, 46, .12);
+      gap: 10px;
+    }
+    .comm-row:last-child { border-bottom: 0; }
+    .comm-row span { color: var(--ink-soft); }
+    .comm-row strong { color: var(--ink); font-weight: 700; text-align: right; }
+    .comm-row.highlight strong { color: var(--green-700); font-size: 14px; }
+    .comm-row.fee strong { color: var(--danger); }
+    .comm-row.net {
+      background: linear-gradient(135deg, rgba(212,160,23,.18), rgba(212,160,23,.06));
+      margin: 8px -12px -8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--gold);
+      border-bottom: 0;
+    }
+    .comm-row.net strong { color: #8a6500; font-size: 15px; }
+
+    /* ---------------- TOAST ---------------- */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--green-900);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 50px;
+      box-shadow: var(--shadow-lg);
+      z-index: 200;
+      font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      transition: transform .35s cubic-bezier(.4,1.6,.5,1);
+      max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--green-700); }
+    .toast.error { background: var(--danger); }
+    .toast.warn { background: var(--warning); }
+
+    /* ---------------- AUTH SCREEN ---------------- */
+    .auth-overlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, var(--green-900), var(--green-700));
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .auth-overlay.hidden { display: none; }
+    .auth-card {
+      background: var(--paper);
+      border-radius: 18px;
+      max-width: 460px; width: 100%;
+      box-shadow: 0 30px 80px rgba(0,0,0,.4);
+      overflow: hidden;
+      animation: authSlide .35s cubic-bezier(.4,1.6,.5,1);
+    }
+    @keyframes authSlide { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .auth-header {
+      background: var(--green-900);
+      color: #fff;
+      padding: 26px 28px 22px;
+      text-align: center;
+      position: relative;
+      border-bottom: 3px solid var(--gold);
+    }
+    .auth-logo {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-soft));
+      color: var(--green-900);
+      display: grid; place-items: center;
+      font-family: 'Playfair Display', serif;
+      font-weight: 800; font-size: 26px;
+      margin: 0 auto 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    }
+    .auth-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .auth-header p {
+      color: var(--gold-soft);
+      font-size: 12px;
+      letter-spacing: .04em;
+    }
+    .auth-tabs {
+      display: flex;
+      background: var(--cream);
+      border-bottom: 1px solid var(--line);
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 14px;
+      background: transparent;
+      border: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .15s;
+    }
+    .auth-tab.active {
+      color: var(--green-900);
+      background: var(--paper);
+      border-bottom-color: var(--gold);
+    }
+    .auth-body { padding: 24px 28px 28px; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; animation: fadeIn .25s; }
+    .auth-form .form-row { margin-bottom: 14px; }
+    .auth-form .form-row label {
+      display: block;
+      font-size: 11.5px; font-weight: 700;
+      color: var(--ink-soft);
+      margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    .auth-form .form-row input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px; font-family: inherit;
+      background: #fff; color: var(--ink);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .auth-form .form-row input:focus {
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(26, 160, 90, .15);
+    }
+    .auth-form .btn-submit {
+      width: 100%;
+      background: var(--green-700);
+      color: #fff;
+      border: 0;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background .2s, transform .15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-form .btn-submit:hover { background: var(--green-900); transform: translateY(-1px); }
+    .auth-form .btn-submit:disabled { background: #b9c4be; cursor: not-allowed; transform: none; }
+
+    /* Champ auto-généré avec boutons */
+    .gen-field {
+      display: flex; gap: 6px; align-items: stretch;
+    }
+    .gen-field input {
+      flex: 1;
+      padding: 11px 14px !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 10px !important;
+      font-size: 14px !important;
+      font-family: 'Courier New', monospace !important;
+      background: var(--cream) !important;
+      color: var(--green-900) !important;
+      font-weight: 700 !important;
+      letter-spacing: 1px !important;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .gen-field input:focus { border-color: var(--green-500) !important; }
+    .gen-btn {
+      flex: 0 0 auto;
+      width: 42px; height: 42px;
+      background: var(--green-700);
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: background .15s, transform .15s;
+    }
+    .gen-btn:hover { background: var(--green-900); transform: translateY(-1px); }
+    .gen-btn:active { transform: translateY(0); }
+
+    .auth-error {
+      background: var(--danger-soft);
+      color: var(--danger);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+      display: none;
+      border-left: 3px solid var(--danger);
+    }
+    .auth-error.show { display: block; }
+    .auth-info {
+      background: #ecf6ef;
+      color: var(--green-700);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 14px;
+      border-left: 3px solid var(--green-500);
+    }
+    .auth-warn {
+      background: #fff7e0;
+      color: #8a6500;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 14px;
+      border-left: 3px solid var(--gold);
+    }
+    .auth-footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--ink-soft);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+    }
+
+    /* Topbar session badge */
+    .session-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(212, 160, 23, .25);
+      border: 1px solid var(--gold);
+      color: var(--gold-soft);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px; font-weight: 700;
+    }
+    .session-badge.expiring {
+      background: rgba(214, 137, 16, .35);
+      border-color: var(--warning);
+      color: #fff;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .session-badge.expired {
+      background: rgba(192, 57, 43, .4);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .7; }
+    }
+    .session-vendor {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .session-vendor svg { color: var(--gold-soft); }
+
+    /* ---------------- MODAL CONFIRM ---------------- */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(11, 26, 20, .55);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; animation: fadeIn .2s; }
+    .modal {
+      background: var(--paper);
+      border-radius: 14px;
+      max-width: 460px; width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-head {
+      background: var(--danger);
+      color: #fff;
+      padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-head.success { background: var(--green-700); }
+    .modal-head h3 { color: #fff; font-size: 16px; }
+    .modal-close {
+      background: rgba(255,255,255,.2); border: 0; color: #fff;
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: 18px;
+    }
+    .modal-body { padding: 20px; font-size: 14px; color: var(--ink); }
+    .modal-body .form-row { margin-bottom: 12px; }
+    .modal-foot { padding: 0 20px 20px; display: flex; gap: 10px; }
+    .modal-foot .btn { flex: 1; justify-content: center; }
+
+    /* ---------------- RESPONSIVE ---------------- */
+    @media (max-width: 960px) {
+      .scanner-wrap { grid-template-columns: 1fr; }
+      .commission-summary { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 0 14px; }
+      .topbar-inner { gap: 10px; height: 56px; }
+      .brand { font-size: 16px; gap: 8px; }
+      .brand-mark { width: 32px; height: 32px; font-size: 13px; }
+      .brand small { display: none; }
+      .top-btn { padding: 7px 10px; font-size: 12px; }
+      .top-btn span { display: none; }
+      .back-link span { display: none; }
+      .tabs { top: 56px; }
+      .tab { padding: 12px 14px; font-size: 13px; }
+      .hero-stats { padding: 22px 0 18px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .stat-card { padding: 11px 12px; }
+      .stat-card .val { font-size: 18px; }
+      .scanner-card { padding: 14px; }
+      .scanner-card h3 { font-size: 16px; }
+      .scanner-actions .btn { min-width: 0; font-size: 12px; padding: 9px 12px; }
+      .manual-entry { flex-direction: column; align-items: stretch; }
+      .manual-entry .btn { width: 100%; }
+      .section-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .section-head h2 { font-size: 19px; }
+      .section-head h2::before { height: 22px; }
+      .section-head .actions { width: 100%; }
+      .section-head .actions .btn { flex: 1; justify-content: center; padding: 9px 10px; font-size: 12px; }
+      table.data { min-width: 600px; }
+      table.data thead th { padding: 9px 10px; font-size: 10px; }
+      table.data tbody td { padding: 9px 10px; font-size: 12px; }
+      .stock-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+      .stock-card { padding: 11px; }
+      .stock-card .stock-name { font-size: 13px; }
+      .toast { left: 12px; right: 12px; bottom: 16px; transform: translateY(120%); max-width: none; font-size: 13px; padding: 11px 14px; text-align: center; }
+      .toast.show { transform: translateY(0); }
+      .auth-overlay { padding: 12px; align-items: flex-start; overflow-y: auto; }
+      .auth-card { max-width: 100%; }
+      .auth-header { padding: 22px 20px 18px; }
+      .auth-logo { width: 56px; height: 56px; font-size: 22px; }
+      .auth-header h1 { font-size: 19px; }
+      .auth-tab { padding: 12px 10px; font-size: 12px; }
+      .auth-body { padding: 18px 20px 22px; }
+      .auth-form .form-row input { font-size: 16px; padding: 12px 14px; }
+      .gen-field input { font-size: 14px !important; padding: 12px 12px !important; letter-spacing: .5px !important; }
+      .gen-btn { width: 38px; height: 48px; }
+      .auth-footer { font-size: 10.5px; }
+      .session-vendor span { display: none; }
+      .session-badge { padding: 6px 9px; font-size: 11px; }
+      .top-btn#logoutBtn span { display: none; }
+    }
+    @media (max-width: 380px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .session-badge { display: none !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============= AUTH OVERLAY (login / signup) ============= -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">EA</div>
+        <h1>ETS EL ARAFAT</h1>
+        <p>Espace Comptabilité — Réservé aux vendeurs</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-tab="login">Connexion</button>
+        <button class="auth-tab" data-auth-tab="signup">Créer un compte</button>
+      </div>
+
+      <div class="auth-body">
+        <div class="auth-error" id="authError"></div>
+        <div class="auth-info" id="authInfo" style="display:none;"></div>
+        <div class="auth-warn" id="authWarn" style="display:none;"></div>
+
+        <!-- Form Connexion -->
+        <form class="auth-form active" id="loginForm" autocomplete="off">
+          <!-- Compte vendeur par défaut (admin) -->
+          <div class="auth-info" id="adminAccountInfo" style="margin-bottom:14px;">
+            <strong>👤 Compte vendeur par défaut</strong>
+            <div style="margin-top:6px;font-size:11.5px;line-height:1.7;color:var(--ink);">
+              <div>👉 Identifiant : <code id="adminUsernameDisplay" style="background:#fff;padding:2px 6px;border-radius:4px;font-family:'Courier New',monospace;font-weight:700;color:var(--green-900);letter-spacing:2px;">•••••</code></div>
+              <div>🔑 Mot de passe : <code id="adminPasswordDisplay" style="background:#fff;padding:2px 6px;border-radius:4px;font-family:'Courier New',monospace;font-weight:700;color:var(--green-900);letter-spacing:2px;">•••••••</code></div>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" id="toggleAdminCreds" style="background:var(--green-700);color:#fff;border:0;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span id="toggleAdminCredsLabel">Afficher</span>
+              </button>
+              <button type="button" id="copyAdminCreds" style="background:var(--gold);color:var(--green-900);border:0;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copier
+              </button>
+              <button type="button" id="fillAdminBtn" style="background:var(--gold);color:var(--green-900);border:0;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:auto;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                Connexion rapide
+              </button>
+            </div>
+            <div style="margin-top:6px;font-size:10.5px;color:var(--ink-soft);">
+              Compte valable 30 jours. Cliquez sur « Connexion rapide » pour vous connecter directement, ou saisissez les identifiants ci-dessous.
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="loginUsername">Identifiant vendeur</label>
+            <input type="text" id="loginUsername" required autocomplete="username" placeholder="Votre identifiant">
+          </div>
+          <div class="form-row">
+            <label for="loginPassword">Mot de passe</label>
+            <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+            Se connecter
+          </button>
+        </form>
+
+        <!-- Form Création de compte -->
+        <form class="auth-form" id="signupForm" autocomplete="off">
+          <div class="auth-info" style="margin-bottom:14px;">
+            <strong>📊 Commission vendeur — 30 derniers jours</strong>
+            <div id="signupCommissionPreview" style="margin-top:8px;"></div>
+          </div>
+          <div class="form-row">
+            <label for="signupVendor">Nom complet du vendeur</label>
+            <input type="text" id="signupVendor" required placeholder="Ex : Adamou Said">
+          </div>
+
+          <!-- Identifiant auto-généré -->
+          <div class="form-row">
+            <label for="signupUsername">Identifiant de connexion <span style="color:var(--green-700);font-weight:700;text-transform:none;letter-spacing:0;">(auto-généré)</span></label>
+            <div class="gen-field">
+              <input type="text" id="signupUsername" readonly style="font-family:'Courier New',monospace;letter-spacing:1px;background:var(--cream);font-weight:700;color:var(--green-900);">
+              <button type="button" class="gen-btn" id="regenUsername" title="Générer un nouvel identifiant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-3.51-7.13"/><polyline points="21 4 21 10 15 10"/></svg>
+              </button>
+              <button type="button" class="gen-btn" id="copyUsername" title="Copier l'identifiant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mot de passe auto-généré -->
+          <div class="form-row">
+            <label for="signupPassword">Mot de passe <span style="color:var(--green-700);font-weight:700;text-transform:none;letter-spacing:0;">(auto-généré)</span></label>
+            <div class="gen-field">
+              <input type="text" id="signupPassword" readonly style="font-family:'Courier New',monospace;letter-spacing:1px;background:var(--cream);font-weight:700;color:var(--green-900);">
+              <button type="button" class="gen-btn" id="togglePassword" title="Afficher / masquer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button type="button" class="gen-btn" id="regenPassword" title="Générer un nouveau mot de passe">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-3.51-7.13"/><polyline points="21 4 21 10 15 10"/></svg>
+              </button>
+              <button type="button" class="gen-btn" id="copyPassword" title="Copier le mot de passe">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" style="background:#25D366;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.519 5.26l-.999 3.648 3.969-1.607z"/></svg>
+            Créer le compte & envoyer sur WhatsApp
+          </button>
+          <p style="text-align:center;font-size:10.5px;color:var(--ink-soft);margin-top:10px;">
+            ℹ️ L'identifiant et le mot de passe sont générés automatiquement. La création envoie ces infos et le récap des commissions au <strong>+228 92 87 16 05</strong>.
+          </p>
+        </form>
+
+        <div class="auth-footer">
+          🔒 Accès réservé aux comptes vendeurs enregistrés sur cet appareil.<br>
+          Chaque compte est valable <strong>30 jours</strong> et doit être renouvelé ensuite.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= TOPBAR ============= -->
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-mark">EA</span>
+        <span>
+          ETS EL Arafat
+          <small>Comptabilité &amp; Gestion</small>
+        </span>
+      </a>
+      <div class="topbar-actions">
+        <span class="session-vendor" id="sessionVendor" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span id="sessionVendorName">—</span>
+        </span>
+        <span class="session-badge" id="sessionBadge" style="display:none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="sessionDaysLeft">—</span>
+        </span>
+        <a href="index.html" class="back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span>Boutique</span>
+        </a>
+        <button class="top-btn" id="exportBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          <span>Export CSV</span>
+        </button>
+        <button class="top-btn danger" id="resetBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          <span>Réinitialiser</span>
+        </button>
+        <button class="top-btn" id="logoutBtn" title="Déconnexion">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span>Déconnexion</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============= HERO STATS ============= -->
+  <section class="hero-stats">
+    <div class="container">
+      <h1>Tableau de bord comptable</h1>
+      <p>Suivi des ventes, gestion du stock et calcul de la commission vendeur (5% par produit vendu).</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="lbl">Chiffre d'affaires</div>
+          <div class="val" id="statCA">0 FCFA</div>
+          <div class="sub" id="statSalesCount">0 vente(s) enregistrée(s)</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Bénéfice brut</div>
+          <div class="val" id="statProfit">0 FCFA</div>
+          <div class="sub" id="statMargin">Marge moyenne 0%</div>
+        </div>
+        <div class="stat-card commission">
+          <div class="lbl">Commission vendeur (5%)</div>
+          <div class="val" id="statCommission">0 FCFA</div>
+          <div class="sub" id="statCommissionInfo">À reverser au vendeur</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Articles vendus</div>
+          <div class="val" id="statItemsSold">0</div>
+          <div class="sub" id="statItemsLeft">0 article(s) en stock</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= TABS ============= -->
+  <nav class="tabs">
+    <div class="container" style="display:flex; gap:4px; padding:0 20px;">
+      <button class="tab active" data-tab="scanner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10"/></svg>
+        Scanner un reçu
+      </button>
+      <button class="tab" data-tab="sales">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        Ventes <span class="badge" id="badgeSales">0</span>
+      </button>
+      <button class="tab" data-tab="stock">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Stock <span class="badge warn" id="badgeStock">0</span>
+      </button>
+      <button class="tab" data-tab="commission">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
+        Commission vendeur
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============= MAIN ============= -->
+  <main>
+    <div class="container">
+
+      <!-- ===== TAB: SCANNER ===== -->
+      <section class="tab-panel active" id="panel-scanner">
+        <div class="section-head">
+          <h2>Scanner un reçu</h2>
+        </div>
+        <div class="scanner-wrap">
+          <div class="scanner-card">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Scan par caméra
+            </h3>
+            <div class="video-wrap" id="videoWrap">
+              <video id="video" playsinline muted></video>
+              <div class="video-overlay">
+                <div class="scan-frame"><span></span></div>
+                <div class="scan-line"></div>
+              </div>
+            </div>
+            <div class="scanner-status" id="scannerStatus">Caméra arrêtée. Cliquez sur « Démarrer ».</div>
+            <div class="scanner-actions">
+              <button class="btn btn-primary" id="startScan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Démarrer
+              </button>
+              <button class="btn btn-ghost" id="stopScan">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+                Arrêter
+              </button>
+            </div>
+          </div>
+
+          <div class="scanner-card">
+            <h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+              Saisie manuelle du code
+            </h3>
+            <div class="form-row">
+              <label for="manualCode">Code du reçu (format REA-XXXXXX)</label>
+              <input type="text" id="manualCode" placeholder="Ex : REA-K4M7PQ" autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;font-family:'Courier New',monospace;">
+            </div>
+            <div class="manual-entry">
+              <button class="btn btn-gold" id="manualSubmit" style="width:100%;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                Enregistrer la vente
+              </button>
+            </div>
+            <div class="manual-hint">
+              <strong>ℹ️ Astuce :</strong> Le code REA-XXXXXX se trouve sur le reçu PDF ou sur l'aperçu du reçu. Saisissez-le ici si la caméra ne fonctionne pas ou si le QR code est illisible.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TAB: SALES ===== -->
+      <section class="tab-panel" id="panel-sales">
+        <div class="section-head">
+          <h2>Ventes enregistrées</h2>
+          <div class="actions">
+            <button class="btn btn-ghost" id="clearSalesBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/></svg>
+              Vider les ventes
+            </button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-wrap">
+            <table class="data" id="salesTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Code reçu</th>
+                  <th>Article</th>
+                  <th class="num">Qté</th>
+                  <th class="num">Prix unit.</th>
+                  <th class="num">Total</th>
+                  <th class="num">Commission 5%</th>
+                  <th>Client</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="salesBody">
+                <tr class="empty-row"><td colspan="9">Aucune vente enregistrée. Scannez un reçu pour commencer.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TAB: STOCK ===== -->
+      <section class="tab-panel" id="panel-stock">
+        <div class="section-head">
+          <h2>État du stock</h2>
+          <div class="actions">
+            <button class="btn btn-ghost" id="restockBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/><polyline points="21 4 21 12 13 12"/></svg>
+              Réinitialiser le stock
+            </button>
+          </div>
+        </div>
+        <div class="stock-grid" id="stockGrid"></div>
+      </section>
+
+      <!-- ===== TAB: COMMISSION ===== -->
+      <section class="tab-panel" id="panel-commission">
+        <div class="section-head">
+          <h2>Commission vendeur</h2>
+        </div>
+        <div class="commission-summary">
+          <div class="item">
+            <div class="lbl">Total ventes (cumul)</div>
+            <div class="val" id="commTotal">0 FCFA</div>
+          </div>
+          <div class="item highlight">
+            <div class="lbl">Taux commission</div>
+            <div class="val">5%</div>
+          </div>
+          <div class="item highlight">
+            <div class="lbl">Commission totale (5%)</div>
+            <div class="val" id="commAmount">0 FCFA</div>
+          </div>
+        </div>
+
+        <div style="background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:18px;box-shadow:var(--shadow-sm);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--gold);">
+            <h3 style="font-family:'Playfair Display',serif;color:var(--green-900);font-size:16px;">📊 Récapitulatif — 30 derniers jours</h3>
+            <span class="pill gold" id="c30Days">Période</span>
+          </div>
+          <div id="commission30DaysBody"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-wrap">
+            <table class="data" id="commissionTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Code reçu</th>
+                  <th>Article</th>
+                  <th class="num">Qté</th>
+                  <th class="num">Montant vente</th>
+                  <th class="num">Commission 5%</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="commissionBody">
+                <tr class="empty-row"><td colspan="7">Aucune commission à reverser pour le moment.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============= TOAST ============= -->
+  <div class="toast" id="toast">
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- ============= CONFIRM MODAL ============= -->
+  <div class="modal-backdrop" id="confirmModal">
+    <div class="modal">
+      <div class="modal-head" id="confirmHead">
+        <h3 id="confirmTitle">Confirmation</h3>
+        <button class="modal-close" id="confirmClose">&times;</button>
+      </div>
+      <div class="modal-body" id="confirmBody">Êtes-vous sûr ?</div>
+      <div class="modal-foot" id="confirmFoot">
+        <button class="btn btn-ghost" id="confirmCancel">Annuler</button>
+        <button class="btn btn-danger" id="confirmOk">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===========================================================
+   ETS EL ARAFAT — Comptabilité
+   ⚙️ AUTHENTIFICATION :
+   - Compte d'essai (demo / demo123) créé AUTOMATIQUEMENT en local au 1er chargement
+   - Accès AU FICHIER bloqué tant qu'aucun compte n'existe en local
+   - Comptes vendeurs stockés en localStorage (clé: ets_arafat_accounts)
+   - Hash SHA-256 des mots de passe via crypto.subtle
+   - Validité 30 jours par compte (expiresAt)
+   - Session courante stockée séparément (ets_arafat_session)
+   - Expiration → déconnexion auto + invitation à créer un nouveau compte
+
+   💰 COMMISSION & FRAIS :
+   - Commission vendeur : 5% du montant de chaque vente
+   - Frais de création de compte : 2% des 5% (= 0,1% du CA)
+   - Net à reverser au vendeur = 5% − 2% des 5%
+   - Envoi WhatsApp au +228 92 87 16 05 lors de la création de compte
+   =========================================================== */
+
+/* ===========================================================
+   HELPERS GLOBAUX
+   =========================================================== */
+const $ = (s, c=document) => c.querySelector(s);
+const $$ = (s, c=document) => Array.from(c.querySelectorAll(s));
+const fmt = n => n.toLocaleString('fr-FR') + ' FCFA';
+const fmtDate = d => {
+  const dt = new Date(d);
+  const pad = x => String(x).padStart(2,'0');
+  return `${pad(dt.getDate())}/${pad(dt.getMonth()+1)}/${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+};
+function escapeHTML(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/* ===========================================================
+   MODULE D'AUTHENTIFICATION
+   =========================================================== */
+const AUTH = {
+  ACCOUNTS_KEY: 'ets_arafat_accounts',
+  SESSION_KEY:  'ets_arafat_session',
+  VALIDITY_DAYS: 30,
+  WARN_DAYS: 5,
+};
+
+async function hashPassword(password) {
+  const enc = new TextEncoder().encode('ets_arafat_salt_' + password);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getAccounts() {
+  try { return JSON.parse(localStorage.getItem(AUTH.ACCOUNTS_KEY)) || []; }
+  catch { return []; }
+}
+function saveAccounts(accs) {
+  localStorage.setItem(AUTH.ACCOUNTS_KEY, JSON.stringify(accs));
+}
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(AUTH.SESSION_KEY)); }
+  catch { return null; }
+}
+function saveSession(sess) {
+  localStorage.setItem(AUTH.SESSION_KEY, JSON.stringify(sess));
+}
+function clearSession() {
+  localStorage.removeItem(AUTH.SESSION_KEY);
+}
+
+function computeExpiresAt() {
+  return Date.now() + AUTH.VALIDITY_DAYS * 24 * 60 * 60 * 1000;
+}
+function daysLeft(expiresAt) {
+  const ms = expiresAt - Date.now();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / (24 * 60 * 60 * 1000));
+}
+function isExpired(account) {
+  return Date.now() >= account.expiresAt;
+}
+
+async function createAccount(vendorName, username, password, isDemo = false) {
+  const accs = getAccounts();
+  if (accs.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+    throw new Error('Cet identifiant est déjà utilisé. Choisissez-en un autre.');
+  }
+  const hashed = await hashPassword(password);
+  const account = {
+    vendorName,
+    username: username.toLowerCase(),
+    passwordHash: hashed,
+    createdAt: Date.now(),
+    expiresAt: computeExpiresAt(),
+    isDemo,
+  };
+  accs.push(account);
+  saveAccounts(accs);
+  return account;
+}
+
+async function authenticate(username, password) {
+  const accs = getAccounts();
+  const account = accs.find(a => a.username.toLowerCase() === username.toLowerCase());
+  if (!account) {
+    throw new Error('Identifiant inconnu. Créez un compte vendeur.');
+  }
+  const hashed = await hashPassword(password);
+  if (hashed !== account.passwordHash) {
+    throw new Error('Mot de passe incorrect.');
+  }
+  if (isExpired(account)) {
+    const filtered = accs.filter(a => a.username.toLowerCase() !== username.toLowerCase());
+    saveAccounts(filtered);
+    throw new Error('EXPIRED');
+  }
+  return account;
+}
+
+function loginAccount(account) {
+  const session = {
+    username: account.username,
+    vendorName: account.vendorName,
+    loginAt: Date.now(),
+    expiresAt: account.expiresAt,
+    isDemo: !!account.isDemo,
+    role: account.role || 'vendor',
+  };
+  saveSession(session);
+  return session;
+}
+
+function checkSession() {
+  const session = getSession();
+  if (!session) return { ok: false, reason: 'no_session' };
+  const accs = getAccounts();
+  const account = accs.find(a => a.username.toLowerCase() === session.username.toLowerCase());
+  if (!account) {
+    clearSession();
+    return { ok: false, reason: 'account_not_found' };
+  }
+  if (isExpired(account)) {
+    const filtered = accs.filter(a => a.username.toLowerCase() !== session.username.toLowerCase());
+    saveAccounts(filtered);
+    clearSession();
+    return { ok: false, reason: 'expired', vendorName: account.vendorName };
+  }
+  return { ok: true, account, daysLeft: daysLeft(account.expiresAt) };
+}
+
+/* ===========================================================
+   COMPTE VENDEUR PAR DÉFAUT (ADMIN)
+   - Créé automatiquement en local au premier chargement
+   - L'accès au fichier n'est possible QUE si au moins un compte existe en local
+   - Si localStorage est vidé, le compte est recréé
+   - Compte admin : vendeur par défaut de la boutique (accès complet)
+   =========================================================== */
+const ADMIN_ACCOUNT = {
+  vendorName: 'Vendeur par défaut',
+  username: 'admin',
+  password: 'admin123',
+  role: 'admin',
+};
+
+/* Crée le compte vendeur par défaut (admin) en local s'il n'existe aucun compte.
+   Retourne true si le compte a été créé. */
+async function ensureLocalAccounts() {
+  const accs = getAccounts();
+  if (accs.length > 0) return false;
+
+  const hashed = await hashPassword(ADMIN_ACCOUNT.password);
+  const account = {
+    vendorName: ADMIN_ACCOUNT.vendorName,
+    username: ADMIN_ACCOUNT.username,
+    passwordHash: hashed,
+    createdAt: Date.now(),
+    expiresAt: computeExpiresAt(),
+    role: 'admin',
+    isDemo: false,
+  };
+  saveAccounts([account]);
+  return true;
+}
+
+/* Alias pour rétro-compatibilité (anciennes références) */
+const ensureDemoAccount = ensureLocalAccounts;
+
+/* Vérifie qu'au moins un compte existe en local. Si non, crée le compte admin.
+   C'est le GARDIEN d'accès : sans compte local, impossible d'entrer. */
+async function requireLocalAccount() {
+  let accs = getAccounts();
+  if (accs.length === 0) {
+    await ensureLocalAccounts();
+    accs = getAccounts();
+  }
+  return accs;
+}
+
+/* ===========================================================
+   UI AUTH
+   =========================================================== */
+function showAuthOverlay(message, type = 'info', focusTab = 'login') {
+  $('#authOverlay').classList.remove('hidden');
+  $('#authError').classList.remove('show');
+  $('#authError').textContent = '';
+  $('#authInfo').style.display = 'none';
+  $('#authWarn').style.display = 'none';
+  if (message) {
+    if (type === 'error') {
+      $('#authError').textContent = message;
+      $('#authError').classList.add('show');
+    } else if (type === 'info') {
+      $('#authInfo').textContent = message;
+      $('#authInfo').style.display = 'block';
+    } else if (type === 'warn') {
+      $('#authWarn').innerHTML = message;
+      $('#authWarn').style.display = 'block';
+    }
+  }
+  $$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.authTab === focusTab));
+  $$('.auth-form').forEach(f => f.classList.remove('active'));
+  $('#' + focusTab + 'Form').classList.add('active');
+  if (focusTab === 'signup') {
+    refreshSignupCommissionPreview();
+    initSignupGeneratedFields();
+  }
+  setTimeout(() => {
+    const firstInput = $('#' + focusTab + 'Form').querySelector('input:not([readonly])');
+    if (firstInput) firstInput.focus();
+  }, 100);
+}
+
+function hideAuthOverlay() {
+  $('#authOverlay').classList.add('hidden');
+}
+
+function updateSessionBadge(session, dLeft) {
+  const badge = $('#sessionBadge');
+  const vendor = $('#sessionVendor');
+  if (!session) {
+    badge.style.display = 'none';
+    vendor.style.display = 'none';
+    return;
+  }
+  vendor.style.display = 'inline-flex';
+  $('#sessionVendorName').textContent = session.vendorName;
+  badge.style.display = 'inline-flex';
+  badge.classList.remove('expiring', 'expired');
+  if (dLeft <= 0) {
+    badge.classList.add('expired');
+    $('#sessionDaysLeft').textContent = 'Compte expiré';
+  } else if (dLeft <= AUTH.WARN_DAYS) {
+    badge.classList.add('expiring');
+    $('#sessionDaysLeft').textContent = `Plus que ${dLeft} jour${dLeft>1?'s':''}`;
+  } else {
+    $('#sessionDaysLeft').textContent = `${dLeft} jours restants`;
+  }
+}
+
+/* Vérifie la session et bloque l'accès si non authentifié */
+function verifyAndApplySession() {
+  const check = checkSession();
+  if (check.ok) {
+    hideAuthOverlay();
+    const session = getSession();
+    updateSessionBadge(session, check.daysLeft);
+    initApp();
+    if (check.daysLeft <= AUTH.WARN_DAYS && check.daysLeft > 0) {
+      showToast(`⚠️ Votre compte expire dans ${check.daysLeft} jour${check.daysLeft>1?'s':''}. Pensez à le renouveler.`, 'warn', 6000);
+    }
+    return true;
+  } else {
+    let msg = '', type = 'info', tab = 'login';
+    if (check.reason === 'expired') {
+      msg = `<strong>⏰ Votre compte vendeur a expiré.</strong><br>
+             La durée de validité de 30 jours est atteinte. Pour continuer à accéder à la comptabilité,
+             veuillez <strong>créer un nouveau compte vendeur</strong> via l'onglet ci-dessous.`;
+      type = 'warn';
+      tab = 'signup';
+    } else if (check.reason === 'account_not_found') {
+      msg = 'Votre session n\'est plus valide. Veuillez vous reconnecter ou créer un compte.';
+    } else if (check.reason === 'no_session') {
+      msg = 'Veuillez vous connecter avec votre compte vendeur pour accéder à la comptabilité. ' +
+            'Le compte vendeur par défaut est disponible (identifiants masqués ci-dessous).';
+    }
+    showAuthOverlay(msg, type, tab);
+    updateSessionBadge(null, 0);
+    return false;
+  }
+}
+
+function logout() {
+  clearSession();
+  showToast('Vous êtes déconnecté.', 'warn');
+  showAuthOverlay('Vous avez été déconnecté. Reconnectez-vous pour accéder à la comptabilité.', 'info', 'login');
+  updateSessionBadge(null, 0);
+}
+
+/* ===========================================================
+   COMMISSIONS 30 JOURS — Frais de création de compte = 2% des 5%
+   =========================================================== */
+const LS_KEY = 'ets_arafat_compta';
+const COMMISSION_RATE = 0.05;
+const ACCOUNT_FEE_RATE = 0.02;
+const WHATSAPP_ADMIN_NUMBER = '22892871605';
+
+function readSalesFromStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY));
+    return (saved && saved.sales) ? saved.sales : [];
+  } catch { return []; }
+}
+
+function getCommissionStats30Days() {
+  const sales = readSalesFromStorage();
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const sales30 = sales.filter(s => new Date(s.date).getTime() >= cutoff);
+  const total5pct = sales30.reduce((sum, s) => sum + (s.commission || 0), 0);
+  const fee2pct = Math.round(total5pct * ACCOUNT_FEE_RATE);
+  const netVendor = total5pct - fee2pct;
+  return {
+    total5pct,
+    fee2pct,
+    netVendor,
+    salesCount: sales30.length,
+    totalCA: sales30.reduce((sum, s) => sum + (s.total || 0), 0),
+    totalItems: sales30.reduce((sum, s) => sum + (s.qty || 0), 0),
+  };
+}
+
+function refreshSignupCommissionPreview() {
+  const stats = getCommissionStats30Days();
+  const el = $('#signupCommissionPreview');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="comm-row"><span>📅 Période analysée :</span><strong>30 derniers jours</strong></div>
+    <div class="comm-row"><span>🛒 Ventes enregistrées :</span><strong>${stats.salesCount} vente(s) — ${stats.totalItems} article(s)</strong></div>
+    <div class="comm-row"><span>💰 Chiffre d'affaires (30 j) :</span><strong>${fmt(stats.totalCA)}</strong></div>
+    <div class="comm-row highlight"><span>🏆 Commission vendeur (5%) :</span><strong>${fmt(stats.total5pct)}</strong></div>
+    <div class="comm-row fee"><span>📋 Frais de création de compte (2% des 5%) :</span><strong>− ${fmt(stats.fee2pct)}</strong></div>
+    <div class="comm-row net"><span>✅ Net à reverser au vendeur :</span><strong>${fmt(stats.netVendor)}</strong></div>
+  `;
+}
+
+function sendAccountCreationWhatsApp(account, stats, password) {
+  const createdDate = new Date(account.createdAt);
+  const expiresDate = new Date(account.expiresAt);
+  const pad = n => String(n).padStart(2, '0');
+  const fmtFullDate = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} à ${pad(d.getHours())}h${pad(d.getMinutes())}`;
+
+  const lines = [
+    '*🆕 NOUVEAU COMPTE VENDEUR — ETS EL ARAFAT*',
+    '━━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '👤 *INFORMATIONS DU COMPTE*',
+    `• Nom du vendeur : ${account.vendorName}`,
+    `• Identifiant : ${account.username}`,
+    `• Mot de passe : ${password}`,
+    `• Date de création : ${fmtFullDate(createdDate)}`,
+    `• Date d'expiration : ${fmtFullDate(expiresDate)}`,
+    `• Validité : 30 jours`,
+    '',
+    '📊 *RÉCAPITULATIF COMMISSIONS (30 DERNIERS JOURS)*',
+    `• Ventes enregistrées : ${stats.salesCount}`,
+    `• Articles vendus : ${stats.totalItems}`,
+    `• Chiffre d'affaires : ${fmt(stats.totalCA)}`,
+    `• Commission vendeur (5%) : ${fmt(stats.total5pct)}`,
+    `• Frais création de compte (2% des 5%) : ${fmt(stats.fee2pct)}`,
+    `• 💰 NET À REVERSER AU VENDEUR : ${fmt(stats.netVendor)}`,
+    '',
+    '🔐 *CONNEXION*',
+    `Pour vous connecter à l'espace comptabilité :`,
+    `→ Identifiant : ${account.username}`,
+    `→ Mot de passe : ${password}`,
+    `URL : ouvrez comptabilite.html sur cet appareil`,
+    '',
+    '⚠️ _Conservez précieusement ces identifiants. Le mot de passe ne pourra plus être affiché après cet envoi._',
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━',
+    '_Compte créé depuis l\'espace comptabilité ETS EL Arafat._'
+  ];
+  const message = lines.join('\n');
+  const url = `https://wa.me/${WHATSAPP_ADMIN_NUMBER}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/* ===========================================================
+   GÉNÉRATION AUTOMATIQUE IDENTIFIANT & MOT DE PASSE
+   =========================================================== */
+function generateUsername(vendorName) {
+  let base = '';
+  if (vendorName && vendorName.trim().length >= 3) {
+    const firstWord = vendorName.trim().toLowerCase().split(/\s+/)[0];
+    base = firstWord
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+    if (base.length < 2) base = 'vendor';
+  } else {
+    base = 'vendor';
+  }
+  const num = Math.floor(10 + Math.random() * 990);
+  let username = base + num;
+  const accs = getAccounts();
+  let attempts = 0;
+  while (accs.some(a => a.username.toLowerCase() === username.toLowerCase()) && attempts < 50) {
+    const newNum = Math.floor(10 + Math.random() * 990);
+    username = base + newNum;
+    attempts++;
+  }
+  return username;
+}
+
+function generatePassword() {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%&*?';
+  const all = upper + lower + digits + symbols;
+  let pwd = '';
+  pwd += upper.charAt(Math.floor(Math.random() * upper.length));
+  pwd += lower.charAt(Math.floor(Math.random() * lower.length));
+  pwd += digits.charAt(Math.floor(Math.random() * digits.length));
+  pwd += symbols.charAt(Math.floor(Math.random() * symbols.length));
+  for (let i = 0; i < 6; i++) {
+    pwd += all.charAt(Math.floor(Math.random() * all.length));
+  }
+  return pwd.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+function initSignupGeneratedFields() {
+  const vendorName = $('#signupVendor').value.trim();
+  $('#signupUsername').value = generateUsername(vendorName);
+  $('#signupPassword').value = generatePassword();
+  $('#signupPassword').type = 'text';
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copié : ' + text, 'success', 2000))
+      .catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Copié : ' + text, 'success', 2000);
+  } catch {
+    showToast('Impossible de copier. Copiez manuellement.', 'error');
+  }
+  document.body.removeChild(ta);
+}
+
+/* ===========================================================
+   ÉVÉNEMENTS AUTH
+   =========================================================== */
+$$('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    $$('.auth-tab').forEach(t => t.classList.remove('active'));
+    $$('.auth-form').forEach(f => f.classList.remove('active'));
+    tab.classList.add('active');
+    $('#' + tab.dataset.authTab + 'Form').classList.add('active');
+    $('#authError').classList.remove('show');
+    if (tab.dataset.authTab === 'signup') {
+      refreshSignupCommissionPreview();
+      initSignupGeneratedFields();
+    }
+    setTimeout(() => {
+      const firstInput = $('#' + tab.dataset.authTab + 'Form').querySelector('input:not([readonly])');
+      if (firstInput) firstInput.focus();
+    }, 100);
+  });
+});
+
+$('#loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = $('#loginUsername').value.trim();
+  const password = $('#loginPassword').value;
+  const errEl = $('#authError');
+  const btn = e.target.querySelector('.btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Vérification...';
+  errEl.classList.remove('show');
+  try {
+    const account = await authenticate(username, password);
+    loginAccount(account);
+    showToast(`Bienvenue ${account.vendorName} !`, 'success');
+    verifyAndApplySession();
+  } catch (err) {
+    if (err.message === 'EXPIRED') {
+      errEl.innerHTML = '⏰ Votre compte a expiré (délai de 30 jours atteint). ' +
+                        'Veuillez <strong>créer un nouveau compte</strong> via l\'onglet « Créer un compte ».';
+      errEl.classList.add('show');
+      $$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.authTab === 'signup'));
+      $$('.auth-form').forEach(f => f.classList.remove('active'));
+      $('#signupForm').classList.add('active');
+      refreshSignupCommissionPreview();
+      initSignupGeneratedFields();
+    } else {
+      errEl.textContent = '❌ ' + err.message;
+      errEl.classList.add('show');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Se connecter';
+  }
+});
+
+/* ===========================================================
+   HANDLERS COMPTE VENDEUR PAR DÉFAUT (ADMIN)
+   =========================================================== */
+
+/* Bouton "Connexion rapide" — connexion directe sécurisée au compte admin */
+$('#fillAdminBtn').addEventListener('click', async () => {
+  const errEl = $('#authError');
+  const btn = $('#fillAdminBtn');
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = 'Connexion...';
+  try {
+    const account = await authenticate(ADMIN_ACCOUNT.username, ADMIN_ACCOUNT.password);
+    loginAccount(account);
+    showToast(`Bienvenue ${account.vendorName} !`, 'success');
+    verifyAndApplySession();
+  } catch (err) {
+    if (err.message === 'EXPIRED') {
+      errEl.innerHTML = '⏰ Le compte vendeur par défaut a expiré. Veuillez créer un nouveau compte vendeur via l\'onglet « Créer un compte ».';
+      errEl.classList.add('show');
+    } else {
+      errEl.textContent = '❌ ' + err.message;
+      errEl.classList.add('show');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+});
+
+/* Bouton "Afficher/Masquer" les identifiants du compte admin */
+let adminCredsVisible = false;
+$('#toggleAdminCreds').addEventListener('click', () => {
+  adminCredsVisible = !adminCredsVisible;
+  const userEl = $('#adminUsernameDisplay');
+  const pwdEl = $('#adminPasswordDisplay');
+  const label = $('#toggleAdminCredsLabel');
+  if (adminCredsVisible) {
+    userEl.textContent = ADMIN_ACCOUNT.username;
+    pwdEl.textContent = ADMIN_ACCOUNT.password;
+    userEl.style.letterSpacing = '1px';
+    pwdEl.style.letterSpacing = '1px';
+    label.textContent = 'Masquer';
+  } else {
+    userEl.textContent = '•••••';
+    pwdEl.textContent = '•••••••';
+    userEl.style.letterSpacing = '2px';
+    pwdEl.style.letterSpacing = '2px';
+    label.textContent = 'Afficher';
+  }
+});
+
+/* Bouton "Copier" les identifiants du compte admin */
+$('#copyAdminCreds').addEventListener('click', () => {
+  const text = `${ADMIN_ACCOUNT.username} / ${ADMIN_ACCOUNT.password}`;
+  copyToClipboard(text);
+});
+
+$('#signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const vendorName = $('#signupVendor').value.trim();
+  const username = $('#signupUsername').value.trim();
+  const password = $('#signupPassword').value;
+  const errEl = $('#authError');
+  const btn = e.target.querySelector('.btn-submit');
+  errEl.classList.remove('show');
+
+  if (vendorName.length < 3) {
+    errEl.textContent = '❌ Le nom du vendeur doit comporter au moins 3 caractères.';
+    errEl.classList.add('show'); return;
+  }
+  if (!username) {
+    errEl.textContent = '❌ Identifiant manquant. Cliquez sur le bouton régénérer.';
+    errEl.classList.add('show'); return;
+  }
+  if (!password) {
+    errEl.textContent = '❌ Mot de passe manquant. Cliquez sur le bouton régénérer.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Création...';
+  try {
+    const account = await createAccount(vendorName, username, password);
+    // IMPORTANT : on NE fait PAS loginAccount(account) ici.
+    // L'utilisateur doit se connecter manuellement après création.
+    // L'accès automatique au fichier n'a lieu que si une session valide
+    // existe déjà en local (vérifié par verifyAndApplySession au chargement).
+    const stats = getCommissionStats30Days();
+    sendAccountCreationWhatsApp(account, stats, password);
+
+    // NE PAS pré-remplir les champs de connexion avec les identifiants générés.
+    // L'utilisateur doit les saisir manuellement (reçus via WhatsApp).
+
+    // Vider les champs de connexion
+    $('#loginUsername').value = '';
+    $('#loginPassword').value = '';
+
+    // Basculer vers l'onglet Connexion
+    $$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.authTab === 'login'));
+    $$('.auth-form').forEach(f => f.classList.remove('active'));
+    $('#loginForm').classList.add('active');
+
+    // Afficher le message de succès (sans révéler les identifiants)
+    $('#authInfo').innerHTML = `<strong>✅ Compte créé avec succès !</strong><br>
+      Vos identifiants ont été envoyés sur WhatsApp au <strong>+228 92 87 16 05</strong>.<br>
+      Récupérez-les depuis WhatsApp, puis saisissez-les ci-dessous pour vous connecter.<br><br>
+      <em style="color:var(--ink-soft);font-size:11px;">⚠️ Conservez précieusement vos identifiants : ils ne pourront plus être affichés ultérieurement.</em>`;
+    $('#authInfo').style.display = 'block';
+    $('#authError').classList.remove('show');
+
+    showToast(`Compte créé ! Identifiants envoyés sur WhatsApp. Saisissez-les pour vous connecter.`, 'success', 5000);
+
+    // Réinitialiser le formulaire de création
+    e.target.reset();
+
+    // Focus sur le champ identifiant de connexion
+    setTimeout(() => {
+      const userInput = $('#loginUsername');
+      if (userInput) userInput.focus();
+    }, 200);
+  } catch (err) {
+    errEl.textContent = '❌ ' + err.message;
+    errEl.classList.add('show');
+    if (err.message.includes('identifiant')) {
+      $('#signupUsername').value = generateUsername(vendorName);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.519 5.26l-.999 3.648 3.969-1.607z"/></svg> Créer le compte & envoyer sur WhatsApp';
+  }
+});
+
+$('#regenUsername').addEventListener('click', () => {
+  const vendorName = $('#signupVendor').value.trim();
+  $('#signupUsername').value = generateUsername(vendorName);
+  showToast('Nouvel identifiant généré.', 'success', 1800);
+});
+
+$('#regenPassword').addEventListener('click', () => {
+  $('#signupPassword').value = generatePassword();
+  $('#signupPassword').type = 'text';
+  showToast('Nouveau mot de passe généré.', 'success', 1800);
+});
+
+$('#copyUsername').addEventListener('click', () => {
+  const val = $('#signupUsername').value;
+  if (val) copyToClipboard(val);
+});
+
+$('#copyPassword').addEventListener('click', () => {
+  const val = $('#signupPassword').value;
+  if (val) copyToClipboard(val);
+});
+
+$('#togglePassword').addEventListener('click', () => {
+  const inp = $('#signupPassword');
+  inp.type = (inp.type === 'password') ? 'text' : 'password';
+});
+
+$('#signupVendor').addEventListener('blur', () => {
+  const vendorName = $('#signupVendor').value.trim();
+  if (vendorName.length >= 3) {
+    $('#signupUsername').value = generateUsername(vendorName);
+  }
+});
+
+$('#logoutBtn').addEventListener('click', () => {
+  showConfirm(
+    'Déconnexion',
+    '<p>Voulez-vous vraiment vous déconnecter de l\'espace comptabilité ?</p>' +
+    '<p style="color:var(--ink-soft);font-size:12px;margin-top:8px;">Vous devrez vous reconnecter pour accéder à nouveau aux ventes et au stock.</p>',
+    () => logout()
+  );
+});
+
+/* Vérification périodique de l'expiration (toutes les 5 minutes) */
+setInterval(() => {
+  if (!$('#authOverlay').classList.contains('hidden')) return;
+  // Vérifier aussi qu'un compte existe toujours en local (anti-effacement)
+  if (getAccounts().length === 0) {
+    showToast('Aucun compte local. Création du compte d\'essai...', 'warn', 4000);
+    ensureDemoAccount()
+      .then(() => verifyAndApplySession())
+      .catch(err => console.error('Erreur création compte démo:', err));
+    return;
+  }
+  const check = checkSession();
+  if (!check.ok) {
+    if (check.reason === 'expired') {
+      showToast('⏰ Votre compte a expiré. Veuillez créer un nouveau compte.', 'warn', 6000);
+    }
+    verifyAndApplySession();
+  } else {
+    const session = getSession();
+    updateSessionBadge(session, check.daysLeft);
+    if (check.daysLeft === 1) {
+      const lastWarn = sessionStorage.getItem('last_expiration_warn');
+      const today = new Date().toDateString();
+      if (lastWarn !== today) {
+        sessionStorage.setItem('last_expiration_warn', today);
+        showToast('⚠️ Dernier jour ! Votre compte expire demain. Renouvelez-le.', 'warn', 8000);
+      }
+    }
+  }
+}, 5 * 60 * 1000);
+
+/* ===========================================================
+   CATALOGUE (identique à index.html)
+   =========================================================== */
+const CATALOG = [
+  { id:'p1',  name:'TV LED Samsung 43" Full HD',      cat:'Électronique',           initialStock:8,  priceOld:350000, pricePromo:299000, warranty:24, icon:'📺' },
+  { id:'p2',  name:'Chaîne Hi-Fi Sony BT-200',        cat:'Électronique',           initialStock:3,  priceOld:150000, pricePromo:119000, warranty:12, icon:'🔊' },
+  { id:'p3',  name:'Projecteur Epson Home Cinema',    cat:'Électronique',           initialStock:2,  priceOld:220000, pricePromo:189000, warranty:12, icon:'📽️' },
+  { id:'p4',  name:'Réfrigérateur 350L No Frost',     cat:'Électroménager',         initialStock:5,  priceOld:420000, pricePromo:379000, warranty:24, icon:'🧊' },
+  { id:'p5',  name:'Machine à laver 8kg automatique', cat:'Électroménager',         initialStock:4,  priceOld:310000, pricePromo:269000, warranty:24, icon:'🫧' },
+  { id:'p6',  name:'Micro-ondes 25L Digital',         cat:'Électroménager',         initialStock:12, priceOld:95000,  pricePromo:75000,  warranty:12, icon:'🍽️' },
+  { id:'p7',  name:'Climatiseur 12000 BTU Split',     cat:'Électroménager',         initialStock:3,  priceOld:280000, pricePromo:245000, warranty:24, icon:'❄️' },
+  { id:'p8',  name:'Ordinateur portable HP 15',      cat:'Informatique',           initialStock:6,  priceOld:450000, pricePromo:399000, warranty:12, icon:'💻' },
+  { id:'p9',  name:'Imprimante Canon PIXMA',         cat:'Informatique',           initialStock:9,  priceOld:85000,  pricePromo:69000,  warranty:12, icon:'🖨️' },
+  { id:'p10', name:'Disque dur externe 1 To',        cat:'Informatique',           initialStock:25, priceOld:45000,  pricePromo:35000,  warranty:36, icon:'💾' },
+  { id:'p11', name:'Smartphone Samsung Galaxy A54',  cat:'Téléphones & Tablettes', initialStock:15, priceOld:220000, pricePromo:189000, warranty:12, icon:'📱' },
+  { id:'p12', name:'iPhone 13 128 Go',               cat:'Téléphones & Tablettes', initialStock:4,  priceOld:650000, pricePromo:599000, warranty:12, icon:'📱' },
+  { id:'p13', name:'Tablette Lenovo Tab M10',        cat:'Téléphones & Tablettes', initialStock:7,  priceOld:180000, pricePromo:149000, warranty:12, icon:'📲' },
+  { id:'p14', name:'Montre Casio Sport',             cat:'Mode & Accessoires',     initialStock:20, priceOld:35000,  pricePromo:25000,  warranty:12, icon:'⌚' },
+  { id:'p15', name:'Sac à main cuir véritable',      cat:'Mode & Accessoires',     initialStock:10, priceOld:45000,  pricePromo:32000,  warranty:6,  icon:'👜' },
+  { id:'p16', name:'Lunettes solaires Ray-Ban',      cat:'Mode & Accessoires',     initialStock:8,  priceOld:60000,  pricePromo:45000,  warranty:6,  icon:'🕶️' },
+  { id:'p17', name:'Bureau en bois massif',          cat:'Maison & Bureau',        initialStock:3,  priceOld:120000, pricePromo:95000,  warranty:12, icon:'🪑' },
+  { id:'p18', name:'Chaise de bureau ergonomique',   cat:'Maison & Bureau',        initialStock:6,  priceOld:75000,  pricePromo:59000,  warranty:12, icon:'💺' },
+  { id:'p19', name:'Lampe LED de bureau',            cat:'Maison & Bureau',        initialStock:18, priceOld:18000,  pricePromo:12000,  warranty:12, icon:'💡' },
+];
+
+let state = { sales: [], stock: {}, scannedCodes: [] };
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY));
+    if (saved) {
+      state.sales = saved.sales || [];
+      state.scannedCodes = saved.scannedCodes || [];
+      state.stock = {};
+      CATALOG.forEach(p => { state.stock[p.id] = p.initialStock; });
+      state.sales.forEach(s => {
+        if (state.stock[s.productId] != null) {
+          state.stock[s.productId] = Math.max(0, state.stock[s.productId] - s.qty);
+        }
+      });
+    } else {
+      resetStock();
+    }
+  } catch (e) {
+    console.error('Erreur de chargement:', e);
+    resetStock();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    sales: state.sales,
+    scannedCodes: state.scannedCodes,
+  }));
+}
+
+function resetStock() {
+  state.stock = {};
+  CATALOG.forEach(p => { state.stock[p.id] = p.initialStock; });
+  state.sales = [];
+  state.scannedCodes = [];
+  saveState();
+}
+
+/* ===========================================================
+   SCANNER QR CODE (jsQR)
+   =========================================================== */
+let videoStream = null;
+let scanInterval = null;
+
+async function startScan() {
+  const video = $('#video');
+  const status = $('#scannerStatus');
+  try {
+    status.className = 'scanner-status';
+    status.textContent = 'Demande d\'accès caméra...';
+    videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = videoStream;
+    await video.play();
+    status.textContent = 'Caméra active. Présentez le QR code du reçu devant la caméra.';
+    scanInterval = setInterval(scanFrame, 200);
+  } catch (e) {
+    console.error('Caméra indisponible:', e);
+    status.className = 'scanner-status error';
+    status.textContent = '❌ Caméra indisponible. Utilisez la saisie manuelle ci-contre. (' + (e.message || 'Erreur inconnue') + ')';
+  }
+}
+
+function stopScan() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+  const video = $('#video');
+  if (video.srcObject) { video.srcObject = null; }
+  const status = $('#scannerStatus');
+  status.className = 'scanner-status';
+  status.textContent = 'Caméra arrêtée.';
+}
+
+function scanFrame() {
+  const video = $('#video');
+  if (!video.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (typeof jsQR === 'undefined') {
+    stopScan();
+    showToast('Bibliothèque jsQR non chargée. Utilisez la saisie manuelle.', 'error');
+    return;
+  }
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data) {
+    stopScan();
+    processScannedData(code.data);
+  }
+}
+
+function processScannedData(rawData) {
+  const status = $('#scannerStatus');
+  let data;
+  try { data = JSON.parse(rawData); }
+  catch (e) { data = { code: rawData.trim().toUpperCase() }; }
+  if (!data.code) {
+    status.className = 'scanner-status error';
+    status.textContent = '❌ QR code illisible ou invalide.';
+    showToast('QR code invalide.', 'error');
+    return;
+  }
+  registerSaleByCode(data);
+}
+
+function registerSaleByCode(scannedData) {
+  const status = $('#scannerStatus');
+  const code = (scannedData.code || '').toUpperCase();
+  if (state.scannedCodes.includes(code)) {
+    status.className = 'scanner-status error';
+    status.textContent = `⚠️ Ce reçu (${code}) a déjà été enregistré.`;
+    showToast(`Reçu ${code} déjà enregistré.`, 'warn');
+    return;
+  }
+  openSaleEntryModal(scannedData);
+}
+
+/* ===========================================================
+   MODALE DE SAISIE DE LA VENTE
+   =========================================================== */
+function openSaleEntryModal(scannedData) {
+  const code = (scannedData.code || '').toUpperCase();
+  const expectedTotal = scannedData.total || 0;
+  const expectedItemsCount = scannedData.items || 0;
+  const receiptNum = scannedData.receipt || '';
+  const dateStr = scannedData.date || '';
+
+  const backdrop = $('#confirmModal');
+  const head = $('#confirmHead');
+  const body = $('#confirmBody');
+  const foot = $('#confirmFoot');
+
+  head.className = 'modal-head success';
+  head.style.background = 'var(--green-900)';
+  $('#confirmTitle').textContent = `Enregistrer la vente — ${code}`;
+
+  body.innerHTML = `
+    <div style="margin-bottom:14px;padding:10px;background:var(--cream);border-radius:8px;font-size:12.5px;">
+      <strong>Reçu scanné :</strong> ${code}<br>
+      ${receiptNum ? `<strong>Réf. :</strong> ${receiptNum}<br>` : ''}
+      ${dateStr ? `<strong>Date émission :</strong> ${dateStr}<br>` : ''}
+      ${expectedTotal ? `<strong>Total attendu :</strong> ${fmt(expectedTotal)}<br>` : ''}
+      ${expectedItemsCount ? `<strong>Articles attendus :</strong> ${expectedItemsCount}` : ''}
+    </div>
+    <div class="form-row">
+      <label for="saleProduct">Produit vendu *</label>
+      <select id="saleProduct">
+        <option value="">— Sélectionner un article —</option>
+        ${CATALOG.map(p => `<option value="${p.id}">${p.icon} ${p.name} — ${fmt(p.pricePromo)} (stock: ${state.stock[p.id]})</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="saleQty">Quantité vendue *</label>
+      <input type="number" id="saleQty" min="1" value="1" />
+    </div>
+    <div class="form-row">
+      <label for="saleClient">Nom du client (optionnel)</label>
+      <input type="text" id="saleClient" placeholder="Ex : Adamou Said" />
+    </div>
+    <div class="form-row">
+      <label for="salePhone">Téléphone du client (optionnel)</label>
+      <input type="tel" id="salePhone" placeholder="+228 ..." />
+    </div>
+    <div id="salePreview" style="margin-top:12px;padding:10px;background:#ecf6ef;border-radius:8px;font-size:13px;display:none;"></div>
+  `;
+
+  foot.innerHTML = `
+    <button class="btn btn-ghost" id="saleCancel">Annuler</button>
+    <button class="btn btn-primary" id="saleConfirm">Enregistrer</button>
+  `;
+  backdrop.classList.add('open');
+
+  const updatePreview = () => {
+    const prod = CATALOG.find(p => p.id === $('#saleProduct').value);
+    const qty = parseInt($('#saleQty').value, 10) || 0;
+    const preview = $('#salePreview');
+    if (prod && qty > 0) {
+      const total = prod.pricePromo * qty;
+      const commission = Math.round(total * COMMISSION_RATE);
+      preview.style.display = 'block';
+      preview.innerHTML = `
+        <strong>Total vente :</strong> ${fmt(total)}<br>
+        <strong>Commission vendeur (5%) :</strong> ${fmt(commission)}<br>
+        <strong>Stock après vente :</strong> ${state.stock[prod.id] - qty} (était ${state.stock[prod.id]})
+        ${(state.stock[prod.id] - qty) < 0 ? '<br><span style="color:var(--danger);font-weight:700;">⚠️ Stock insuffisant !</span>' : ''}
+        ${expectedTotal && total !== expectedTotal ? `<br><span style="color:var(--warning);font-weight:600;">⚠️ Le total (${fmt(total)}) ne correspond pas au reçu (${fmt(expectedTotal)}). Vérifiez la quantité.</span>` : ''}
+      `;
+    } else {
+      preview.style.display = 'none';
+    }
+  };
+  $('#saleProduct').addEventListener('change', updatePreview);
+  $('#saleQty').addEventListener('input', updatePreview);
+
+  $('#saleCancel').onclick = () => { backdrop.classList.remove('open'); };
+  $('#saleConfirm').onclick = () => {
+    const prodId = $('#saleProduct').value;
+    const qty = parseInt($('#saleQty').value, 10);
+    const clientName = $('#saleClient').value.trim();
+    const clientPhone = $('#salePhone').value.trim();
+    if (!prodId) { showToast('Veuillez sélectionner un produit.', 'error'); return; }
+    if (!qty || qty < 1) { showToast('Quantité invalide.', 'error'); return; }
+    const prod = CATALOG.find(p => p.id === prodId);
+    if (state.stock[prodId] < qty) {
+      showToast(`Stock insuffisant pour "${prod.name}". Stock actuel : ${state.stock[prodId]}.`, 'error');
+      return;
+    }
+    const sale = {
+      id: 'sale_' + Date.now(),
+      code, receiptNum,
+      date: new Date().toISOString(),
+      productId: prodId,
+      productName: prod.name,
+      productCat: prod.cat,
+      icon: prod.icon,
+      qty,
+      pricePromo: prod.pricePromo,
+      total: prod.pricePromo * qty,
+      commission: Math.round(prod.pricePromo * qty * COMMISSION_RATE),
+      clientName, clientPhone,
+    };
+    state.sales.unshift(sale);
+    state.scannedCodes.push(code);
+    state.stock[prodId] -= qty;
+    saveState();
+    refreshAllUI();
+    backdrop.classList.remove('open');
+    const status = $('#scannerStatus');
+    status.className = 'scanner-status success';
+    status.textContent = `✅ Vente enregistrée : ${prod.name} ×${qty} — ${fmt(sale.total)} (commission ${fmt(sale.commission)})`;
+    showToast(`Vente enregistrée ! Commission : ${fmt(sale.commission)}`, 'success');
+  };
+}
+
+function submitManualCode() {
+  const code = $('#manualCode').value.trim().toUpperCase();
+  if (!code) {
+    showToast('Saisissez un code de reçu (format REA-XXXXXX).', 'error');
+    return;
+  }
+  if (!/^REA-[A-Z0-9]{6}$/.test(code)) {
+    showToast('Format invalide. Attendu : REA-XXXXXX (6 caractères alphanumériques).', 'error');
+    return;
+  }
+  if (state.scannedCodes.includes(code)) {
+    showToast(`Reçu ${code} déjà enregistré.`, 'warn');
+    return;
+  }
+  openSaleEntryModal({ code, receipt: '', date: '', total: 0, items: 0 });
+}
+
+/* ===========================================================
+   RAFRAÎCHISSEMENT UI
+   =========================================================== */
+function refreshAllUI() {
+  renderStats();
+  renderSalesTable();
+  renderStockGrid();
+  renderCommissionTable();
+  updateBadges();
+}
+
+function renderStats() {
+  const totalCA = state.sales.reduce((s, x) => s + x.total, 0);
+  const totalCommission = state.sales.reduce((s, x) => s + x.commission, 0);
+  const totalItemsSold = state.sales.reduce((s, x) => s + x.qty, 0);
+  const totalItemsStock = Object.values(state.stock).reduce((s, x) => s + x, 0);
+  let totalOld = 0;
+  state.sales.forEach(s => {
+    const p = CATALOG.find(x => x.id === s.productId);
+    if (p) totalOld += p.priceOld * s.qty;
+  });
+  const profit = totalOld - totalCA;
+  const margin = totalOld > 0 ? Math.round((profit / totalOld) * 100) : 0;
+  $('#statCA').textContent = fmt(totalCA);
+  $('#statSalesCount').textContent = `${state.sales.length} vente(s) enregistrée(s)`;
+  $('#statProfit').textContent = fmt(profit);
+  $('#statMargin').textContent = `Marge moyenne ${margin}%`;
+  $('#statCommission').textContent = fmt(totalCommission);
+  $('#statCommissionInfo').textContent = `${state.sales.length} vente(s) × 5% à reverser au vendeur`;
+  $('#statItemsSold').textContent = totalItemsSold;
+  $('#statItemsLeft').textContent = `${totalItemsStock} article(s) en stock`;
+}
+
+function renderSalesTable() {
+  const body = $('#salesBody');
+  if (!state.sales.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="9">Aucune vente enregistrée. Scannez un reçu pour commencer.</td></tr>';
+    return;
+  }
+  body.innerHTML = state.sales.map(s => `
+    <tr>
+      <td>${fmtDate(s.date)}</td>
+      <td><span class="pill gold">${s.code}</span></td>
+      <td>${s.icon} ${escapeHTML(s.productName)}</td>
+      <td class="num">${s.qty}</td>
+      <td class="num">${fmt(s.pricePromo)}</td>
+      <td class="num"><strong>${fmt(s.total)}</strong></td>
+      <td class="num" style="color:var(--warning);font-weight:700;">${fmt(s.commission)}</td>
+      <td>${escapeHTML(s.clientName || '—')}<br><small style="color:var(--ink-soft);">${escapeHTML(s.clientPhone || '')}</small></td>
+      <td><button class="row-del" data-id="${s.id}" title="Supprimer">&times;</button></td>
+    </tr>
+  `).join('');
+  $$('.row-del', body).forEach(b => b.addEventListener('click', () => deleteSale(b.dataset.id)));
+}
+
+function renderStockGrid() {
+  const grid = $('#stockGrid');
+  grid.innerHTML = CATALOG.map(p => {
+    const stock = state.stock[p.id] || 0;
+    const pct = Math.min(100, (stock / p.initialStock) * 100);
+    let barClass = '', pillClass = 'ok', pillText = 'En stock';
+    if (stock === 0) { barClass = 'empty'; pillClass = 'danger'; pillText = 'Rupture'; }
+    else if (stock <= 3) { barClass = 'low'; pillClass = 'warn'; pillText = 'Stock faible'; }
+    return `
+      <div class="stock-card">
+        <div class="stock-cat">${p.cat}</div>
+        <div class="stock-name">${p.icon} ${p.name}</div>
+        <div class="stock-row"><span class="lbl">Stock actuel</span><span class="val"><span class="pill ${pillClass}">${stock}</span></span></div>
+        <div class="stock-row"><span class="lbl">Stock initial</span><span class="val">${p.initialStock}</span></div>
+        <div class="stock-row"><span class="lbl">Vendus</span><span class="val">${p.initialStock - stock}</span></div>
+        <div class="stock-row"><span class="lbl">Prix promo</span><span class="val">${fmt(p.pricePromo)}</span></div>
+        <div class="stock-row"><span class="lbl">Statut</span><span class="val">${pillText}</span></div>
+        <div class="stock-bar"><div class="stock-bar-fill ${barClass}" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCommissionTable() {
+  const body = $('#commissionBody');
+  const total = state.sales.reduce((s, x) => s + x.total, 0);
+  const commission = state.sales.reduce((s, x) => s + x.commission, 0);
+  $('#commTotal').textContent = fmt(total);
+  $('#commAmount').textContent = fmt(commission);
+  const stats = getCommissionStats30Days();
+  const c30Body = $('#commission30DaysBody');
+  if (c30Body) {
+    c30Body.innerHTML = `
+      <div class="comm-row"><span>🛒 Ventes sur la période</span><strong>${stats.salesCount} vente(s) — ${stats.totalItems} article(s)</strong></div>
+      <div class="comm-row"><span>💰 Chiffre d'affaires (30 jours)</span><strong>${fmt(stats.totalCA)}</strong></div>
+      <div class="comm-row highlight"><span>🏆 Commission vendeur (5%)</span><strong>${fmt(stats.total5pct)}</strong></div>
+      <div class="comm-row fee"><span>📋 Frais de création de compte (2% des 5%)</span><strong>− ${fmt(stats.fee2pct)}</strong></div>
+      <div class="comm-row net"><span>✅ Net à reverser au vendeur</span><strong>${fmt(stats.netVendor)}</strong></div>
+    `;
+    $('#c30Days').textContent = `${stats.salesCount} vente(s)`;
+  }
+  if (!state.sales.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">Aucune commission à reverser pour le moment.</td></tr>';
+    return;
+  }
+  body.innerHTML = state.sales.map(s => `
+    <tr>
+      <td>${fmtDate(s.date)}</td>
+      <td><span class="pill gold">${s.code}</span></td>
+      <td>${s.icon} ${escapeHTML(s.productName)}</td>
+      <td class="num">${s.qty}</td>
+      <td class="num">${fmt(s.total)}</td>
+      <td class="num" style="color:var(--warning);font-weight:700;">${fmt(s.commission)}</td>
+      <td><span class="pill warn">À reverser</span></td>
+    </tr>
+  `).join('');
+}
+
+function updateBadges() {
+  $('#badgeSales').textContent = state.sales.length;
+  const lowStock = CATALOG.filter(p => (state.stock[p.id] || 0) <= 3).length;
+  const badge = $('#badgeStock');
+  badge.textContent = lowStock;
+  badge.className = 'badge ' + (lowStock > 0 ? 'danger' : 'warn');
+}
+
+function deleteSale(saleId) {
+  const sale = state.sales.find(s => s.id === saleId);
+  if (!sale) return;
+  state.stock[sale.productId] = (state.stock[sale.productId] || 0) + sale.qty;
+  state.sales = state.sales.filter(s => s.id !== saleId);
+  state.scannedCodes = state.scannedCodes.filter(c => c !== sale.code);
+  saveState();
+  refreshAllUI();
+  showToast('Vente supprimée. Stock restauré.', 'success');
+}
+
+function showConfirm(title, bodyHtml, onConfirm) {
+  const backdrop = $('#confirmModal');
+  const head = $('#confirmHead');
+  head.className = 'modal-head';
+  head.style.background = 'var(--danger)';
+  $('#confirmTitle').textContent = title;
+  $('#confirmBody').innerHTML = bodyHtml;
+  $('#confirmFoot').innerHTML = `
+    <button class="btn btn-ghost" id="confirmCancel">Annuler</button>
+    <button class="btn btn-danger" id="confirmOk">Confirmer</button>
+  `;
+  backdrop.classList.add('open');
+  $('#confirmCancel').onclick = () => backdrop.classList.remove('open');
+  $('#confirmOk').onclick = () => { backdrop.classList.remove('open'); onConfirm(); };
+}
+
+function exportCSV() {
+  if (!state.sales.length) { showToast('Aucune vente à exporter.', 'warn'); return; }
+  const headers = ['Date', 'Code reçu', 'Référence', 'Catégorie', 'Produit', 'Qté', 'Prix unitaire', 'Total', 'Commission 5%', 'Client', 'Téléphone'];
+  const rows = state.sales.map(s => [
+    fmtDate(s.date), s.code, s.receiptNum || '', s.productCat, s.productName,
+    s.qty, s.pricePromo, s.total, s.commission, s.clientName || '', s.clientPhone || ''
+  ]);
+  const esc = v => {
+    const str = String(v);
+    if (str.includes(';') || str.includes('"') || str.includes('\n')) return '"' + str.replace(/"/g, '""') + '"';
+    return str;
+  };
+  const csv = [headers, ...rows].map(r => r.map(esc).join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `compta_ets_arafat_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Export CSV téléchargé.', 'success');
+}
+
+let toastTimer;
+function showToast(msg, type = '', duration = 3500) {
+  const t = $('#toast');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  $('#toastMsg').innerHTML = escapeHTML(msg);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+}
+
+/* TABS */
+$$('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    $$('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $('#panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+/* ÉVÉNEMENTS */
+$('#startScan').addEventListener('click', startScan);
+$('#stopScan').addEventListener('click', stopScan);
+$('#manualSubmit').addEventListener('click', submitManualCode);
+$('#manualCode').addEventListener('keydown', e => { if (e.key === 'Enter') submitManualCode(); });
+$('#exportBtn').addEventListener('click', exportCSV);
+
+$('#resetBtn').addEventListener('click', () => {
+  showConfirm(
+    'Réinitialiser toutes les données',
+    `<p style="margin-bottom:10px;"><strong>⚠️ Action irréversible.</strong></p>
+     <p>Cela supprimera toutes les ventes enregistrées et restaurera le stock initial. Les commissions seront remises à zéro.</p>
+     <p style="margin-top:10px;color:var(--ink-soft);font-size:12px;">Les comptes vendeurs ne seront PAS supprimés.</p>`,
+    () => { resetStock(); refreshAllUI(); showToast('Données réinitialisées. Stock restauré.', 'success'); }
+  );
+});
+
+$('#clearSalesBtn').addEventListener('click', () => {
+  if (!state.sales.length) { showToast('Aucune vente à vider.', 'warn'); return; }
+  showConfirm(
+    'Vider toutes les ventes',
+    `<p>Toutes les ventes seront supprimées et le stock sera restauré à sa valeur initiale.</p>`,
+    () => {
+      state.sales = [];
+      state.scannedCodes = [];
+      resetStock();
+      refreshAllUI();
+      showToast('Ventes vidées. Stock restauré.', 'success');
+    }
+  );
+});
+
+$('#restockBtn').addEventListener('click', () => {
+  showConfirm(
+    'Réinitialiser le stock uniquement',
+    `<p>Le stock sera restauré aux valeurs initiales. Les ventes enregistrées seront conservées (mais le stock sera augmenté en conséquence).</p>`,
+    () => {
+      CATALOG.forEach(p => { state.stock[p.id] = p.initialStock; });
+      state.sales.forEach(s => {
+        if (state.stock[s.productId] != null) {
+          state.stock[s.productId] = Math.max(0, state.stock[s.productId] - s.qty);
+        }
+      });
+      saveState();
+      refreshAllUI();
+      showToast('Stock réinitialisé.', 'success');
+    }
+  );
+});
+
+$('#confirmClose').addEventListener('click', () => $('#confirmModal').classList.remove('open'));
+$('#confirmModal').addEventListener('click', e => {
+  if (e.target.id === 'confirmModal') $('#confirmModal').classList.remove('open');
+});
+
+window.addEventListener('beforeunload', stopScan);
+
+/* ===========================================================
+   INIT — Wrapper appelé APRÈS authentification réussie
+   =========================================================== */
+let appInitialized = false;
+function initApp() {
+  if (appInitialized) { refreshAllUI(); return; }
+  appInitialized = true;
+  loadState();
+  refreshAllUI();
+}
+
+/* ===========================================================
+   DÉMARRAGE — Gardien d'accès
+   1. Vérifie qu'au moins un compte existe en local (sinon crée le compte démo)
+   2. Vérifie la session courante
+   3. Si session valide → initApp() (charge le catalogue + ventes)
+   4. Sinon → écran d'authentification affiché (overlay qui bloque tout)
+   =========================================================== */
+(async function startup() {
+  try {
+    // 1. Gardien d'accès : assure qu'un compte existe en local
+    await requireLocalAccount();
+  } catch (err) {
+    console.error('Erreur lors de l\'initialisation du compte local:', err);
+  }
+  // 2. Vérifier la session (affiche l'écran d'auth si non connecté)
+  verifyAndApplySession();
+})();
+</script>
+</body>
+</html>
